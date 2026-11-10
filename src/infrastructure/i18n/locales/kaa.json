@@ -1,0 +1,17 @@
+{
+  "choose_language": "Tilni tanlang · Тилни танланг\nВыберите язык · Choose language\nTildi saylań · 请选择语言",
+  "ask_phone": "Assalawma áleykum! Hamkorbank AI-járdemshisine xosh keldińiz.\n\nDawam etiw ushın <b>telefon nomerińizdi</b> ulasıń — tómendegi túymeni basıń.",
+  "share_phone_button": "📱 Kontaktti ulasıw",
+  "phone_not_own": "Iltimas, óz kontaktińizdi ulasıń — tómendegi túymeni basıń.",
+  "welcome": "Sálem! Men Hamkorbanktiń AI-járdemshisimen. Sizge qanday járdem bere alaman?",
+  "settings_button": "⚙️ Sazlawlar",
+  "settings_title": "Tildi saylań:",
+  "language_changed": "Til ózgertildi ✅",
+  "consent_question": "Hamkorbank ónimleri hám xızmetleri boyınsha <b>jańalıqlardı</b> alıwdı qáleysizbe? Bunıń ushın telefon nomerińiz benen atıńız saqlanadı.",
+  "consent_yes": "Razıman",
+  "consent_no": "Joq",
+  "consent_thanks_yes": "Raxmet! Endi bank ónimleri hám xızmetleri boyınsha jańalıqlardı alasız.",
+  "consent_thanks_no": "Túsinikli, jańalıqlar jiberilmeydi.",
+  "help": "Sazlawlardı ózgertiw ushın /settings buyrıǵın jiberiń.",
+  "need_start": "Baslaw ushın /start buyrıǵın jiberiń."
+}

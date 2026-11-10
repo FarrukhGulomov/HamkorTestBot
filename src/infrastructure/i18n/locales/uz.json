@@ -1,0 +1,17 @@
+{
+  "choose_language": "Tilni tanlang · Тилни танланг\nВыберите язык · Choose language\nTildi saylań · 请选择语言",
+  "ask_phone": "Assalomu alaykum! Hamkorbank AI-yordamchisiga xush kelibsiz.\n\nDavom etish uchun <b>telefon raqamingizni</b> ulashing — pastdagi tugmani bosing.",
+  "share_phone_button": "📱 Kontaktni ulashish",
+  "phone_not_own": "Iltimos, o'zingizning kontaktingizni ulashing — pastdagi tugmani bosing.",
+  "welcome": "Salom! Men Hamkorbankning AI-yordamchisiman. Sizga qanday yordam berishim mumkin?",
+  "settings_button": "⚙️ Sozlamalar",
+  "settings_title": "Tilni tanlang:",
+  "language_changed": "Til o'zgartirildi ✅",
+  "consent_question": "Hamkorbank mahsulotlari va xizmatlari bo'yicha <b>yangiliklarni</b> olishni xohlaysizmi? Buning uchun telefon raqamingiz va ismingiz saqlanadi.",
+  "consent_yes": "Roziman",
+  "consent_no": "Yo'q",
+  "consent_thanks_yes": "Rahmat! Endi bank mahsulotlari va xizmatlari bo'yicha yangiliklarni olasiz.",
+  "consent_thanks_no": "Tushunarli, yangiliklar yuborilmaydi.",
+  "help": "Sozlamalarni o'zgartirish uchun /settings buyrug'ini yuboring.",
+  "need_start": "Boshlash uchun /start buyrug'ini yuboring."
+}

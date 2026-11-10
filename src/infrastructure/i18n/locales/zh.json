@@ -1,0 +1,17 @@
+{
+  "choose_language": "Tilni tanlang · Тилни танланг\nВыберите язык · Choose language\nTildi saylań · 请选择语言",
+  "ask_phone": "您好！欢迎使用 Hamkorbank AI 助手。\n\n请点击下方按钮分享您的<b>手机号码</b>以继续。",
+  "share_phone_button": "📱 分享联系人",
+  "phone_not_own": "请分享您本人的联系方式——点击下方按钮。",
+  "welcome": "您好！我是 Hamkorbank 的 AI 助手，请问有什么可以帮您？",
+  "settings_button": "⚙️ 设置",
+  "settings_title": "请选择语言：",
+  "language_changed": "语言已更改 ✅",
+  "consent_question": "您是否愿意接收 Hamkorbank 产品和服务的<b>最新资讯</b>？为此我们将保存您的手机号码和姓名。",
+  "consent_yes": "同意",
+  "consent_no": "不同意",
+  "consent_thanks_yes": "谢谢！您将收到银行产品和服务的最新资讯。",
+  "consent_thanks_no": "好的，我们不会向您发送资讯。",
+  "help": "发送 /settings 可更改设置。",
+  "need_start": "发送 /start 开始使用。"
+}
