@@ -13,7 +13,7 @@ async def test_register_contact_creates_user_and_normalizes_phone(users, clock):
     assert user.phone_number == "+998901234567"
     assert user.first_name == "Jasur"
     assert user.language is None
-    assert await users.get(1) is user
+    assert await users.get(1) == user
 
 
 async def test_register_contact_twice_keeps_single_user(users, clock):

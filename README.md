@@ -69,10 +69,23 @@ src/
 
 ### Rozilik qanday ishlaydi
 
+Savol foydalanuvchining telefon raqami va ismini qayta ishlashga hamda bank yangiliklarini olishga roziligini so'raydi.
+
 1. `ActivityMiddleware` foydalanuvchining har bir xabarida `last_message_at` ni yangilaydi.
 2. `ConsentScheduler` har 30 soniyada `RequestConsent` use case'ini ishga tushiradi.
 3. Use case oxirgi xabari 3 daqiqadan oldin bo'lgan, til tanlagan va roziligi hali so'ralmagan
-   foydalanuvchilarni topadi, ularga so'rov yuboradi va `consent_requested_at` ni belgilaydi.
-4. Tugma bosilganda `SaveConsent` javobni (`agreed` / `declined`) vaqti bilan bazaga yozadi.
+   foydalanuvchilarni topadi. Har biri uchun avval so'rov yuborish huquqi bazada atomar egallanadi
+   (shu orasida foydalanuvchi yozgan bo'lsa, u o'tkazib yuboriladi), keyin xabar yuboriladi.
+4. Yuborish vaqtinchalik xato bilan tugasa (masalan, tarmoq uzilsa), huquq qaytariladi va keyingi
+   tekshiruvda qayta uriniladi, eng ko'pi bilan 3 marta. Bot bloklangan bo'lsa, qayta urinilmaydi.
+5. Tugma bosilganda `SaveConsent` javobni (`agreed` / `declined`) vaqti bilan bazaga yozadi.
 
-Foydalanuvchi "Yo'q" desa, rozilik qayta so'ralmaydi.
+Bilib qo'yish kerak bo'lgan jihatlar:
+
+- Tekshiruv har 30 soniyada bo'lgani uchun so'rov amalda oxirgi xabardan taxminan 180–210 soniya
+  o'tgach yuboriladi.
+- Rozilik har bir foydalanuvchidan bir marta so'raladi. Topshiriqda takrorlash qoidasi berilmagan,
+  shuning uchun "Yo'q" javobidan keyin qayta so'ralmaydi.
+- Foydalanuvchi ma'lumotlari maydon bo'yicha yangilanadi (butun yozuvni qayta yozish o'rniga),
+  shuning uchun parallel ishlayotgan jarayonlar (scheduler va foydalanuvchi so'rovi) bir-birining
+  tilini, faollik vaqtini yoki rozilik javobini bosib yozmaydi.

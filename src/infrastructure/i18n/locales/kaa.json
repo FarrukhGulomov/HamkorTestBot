@@ -9,11 +9,11 @@
   "settings_button": "⚙️ Sazlawlar",
   "settings_title": "Tildi saylań:",
   "language_changed": "Til ózgertildi ✅",
-  "consent_question": "Hamkorbank ónimleri hám xızmetleri boyınsha <b>jańalıqlardı</b> alıwdı qáleysizbe? Bunıń ushın telefon nomerińiz benen atıńız saqlanadı.",
+  "consent_question": "Telefon nomerińiz benen atıńızdı <b>qayta islewge</b> hám Hamkorbank ónimleri hám xızmetleri boyınsha jańalıqlardı alıwǵa razımısız?",
   "consent_yes": "Razıman",
   "consent_no": "Joq",
-  "consent_thanks_yes": "Raxmet! Endi bank ónimleri hám xızmetleri boyınsha jańalıqlardı alasız.",
-  "consent_thanks_no": "Túsinikli, jańalıqlar jiberilmeydi.",
+  "consent_thanks_yes": "Raxmet! Maǵlıwmatlarıńız qayta islenedi, endi bank ónimleri hám xızmetleri boyınsha jańalıqlardı alasız.",
+  "consent_thanks_no": "Túsinikli, razılıq berilmedi. Jańalıqlar jiberilmeydi.",
   "help": "Sazlawlardı ózgertiw ushın /settings buyrıǵın jiberiń.",
   "need_start": "Baslaw ushın /start buyrıǵın jiberiń."
 }

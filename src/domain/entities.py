@@ -40,16 +40,3 @@ class User:
     @property
     def effective_language(self) -> Language:
         return self.language or DEFAULT_LANGUAGE
-
-    def touch(self, now: datetime) -> None:
-        self.last_message_at = now
-
-    def choose_language(self, language: Language) -> None:
-        self.language = language
-
-    def mark_consent_requested(self, now: datetime) -> None:
-        self.consent_requested_at = now
-
-    def answer_consent(self, agreed: bool, now: datetime) -> None:
-        self.consent_status = ConsentStatus.AGREED if agreed else ConsentStatus.DECLINED
-        self.consent_answered_at = now

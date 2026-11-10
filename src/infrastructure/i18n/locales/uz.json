@@ -9,11 +9,11 @@
   "settings_button": "⚙️ Sozlamalar",
   "settings_title": "Tilni tanlang:",
   "language_changed": "Til o'zgartirildi ✅",
-  "consent_question": "Hamkorbank mahsulotlari va xizmatlari bo'yicha <b>yangiliklarni</b> olishni xohlaysizmi? Buning uchun telefon raqamingiz va ismingiz saqlanadi.",
+  "consent_question": "Telefon raqamingiz va ismingizni <b>qayta ishlashga</b> hamda Hamkorbank mahsulotlari va xizmatlari bo'yicha yangiliklarni olishga rozimisiz?",
   "consent_yes": "Roziman",
   "consent_no": "Yo'q",
-  "consent_thanks_yes": "Rahmat! Endi bank mahsulotlari va xizmatlari bo'yicha yangiliklarni olasiz.",
-  "consent_thanks_no": "Tushunarli, yangiliklar yuborilmaydi.",
+  "consent_thanks_yes": "Rahmat! Ma'lumotlaringiz qayta ishlanadi, endi bank mahsulotlari va xizmatlari bo'yicha yangiliklarni olasiz.",
+  "consent_thanks_no": "Tushunarli, rozilik berilmadi. Yangiliklar yuborilmaydi.",
   "help": "Sozlamalarni o'zgartirish uchun /settings buyrug'ini yuboring.",
   "need_start": "Boshlash uchun /start buyrug'ini yuboring."
 }

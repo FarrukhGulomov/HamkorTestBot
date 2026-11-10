@@ -10,8 +10,4 @@ class TrackActivity:
         self._clock = clock
 
     async def execute(self, telegram_id: int) -> None:
-        user = await self._users.get(telegram_id)
-        if user is None:
-            return
-        user.touch(self._clock.now())
-        await self._users.save(user)
+        await self._users.touch(telegram_id, self._clock.now())

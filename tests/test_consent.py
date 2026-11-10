@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 
 from src.application.change_language import ChangeLanguage, UserNotFound
+from src.application.ports import PermanentDeliveryError
 from src.application.register_contact import RegisterContact
 from src.application.request_consent import RequestConsent
 from src.application.save_consent import SaveConsent
@@ -72,17 +73,63 @@ async def test_user_without_language_is_not_asked(users, clock):
     assert notifier.sent_to == []
 
 
-async def test_failed_delivery_is_not_retried_forever(users, clock):
+async def test_transient_failure_is_retried_on_next_check(users, clock):
     await onboard(users, clock)
-    notifier = RecordingNotifier(fail=True)
+    notifier = RecordingNotifier(error=RuntimeError("network is down"))
+    use_case = make_request_consent(users, clock, notifier)
+    clock.advance(minutes=3)
+
+    assert await use_case.execute() == 0
+    assert users.items[1].consent_requested_at is None
+
+    notifier.error = None
+    assert await use_case.execute() == 1
+    assert notifier.sent_to == [1]
+    assert users.items[1].consent_requested_at is not None
+
+
+async def test_transient_failures_are_limited(users, clock):
+    await onboard(users, clock)
+    notifier = RecordingNotifier(error=RuntimeError("network is down"))
+    use_case = RequestConsent(users, notifier, clock, IDLE, max_attempts=3)
+    clock.advance(minutes=3)
+
+    for _ in range(3):
+        await use_case.execute()
+    notifier.error = None
+    await use_case.execute()
+
+    assert notifier.sent_to == []
+    assert users.items[1].consent_requested_at is not None
+
+
+async def test_permanent_failure_is_not_retried(users, clock):
+    await onboard(users, clock)
+    notifier = RecordingNotifier(error=PermanentDeliveryError("bot was blocked"))
     use_case = make_request_consent(users, clock, notifier)
     clock.advance(minutes=3)
 
     await use_case.execute()
+    notifier.error = None
     await use_case.execute()
 
-    assert users.items[1].consent_requested_at is not None
     assert notifier.sent_to == []
+
+
+async def test_user_who_wrote_after_selection_is_skipped(users, clock):
+    await onboard(users, clock)
+    notifier = RecordingNotifier()
+    use_case = make_request_consent(users, clock, notifier)
+    clock.advance(minutes=3)
+    candidates = await users.find_awaiting_consent(clock.now() - IDLE)
+    # Tanlab olingandan keyin foydalanuvchi yozib yubordi
+    await users.touch(1, clock.now())
+
+    claimed = await users.claim_consent_request(1, clock.now() - IDLE, clock.now())
+
+    assert [u.telegram_id for u in candidates] == [1]
+    assert claimed is False
+    assert await use_case.execute() == 0
 
 
 @pytest.mark.parametrize(

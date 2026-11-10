@@ -9,11 +9,11 @@
   "settings_button": "⚙️ 设置",
   "settings_title": "请选择语言：",
   "language_changed": "语言已更改 ✅",
-  "consent_question": "您是否愿意接收 Hamkorbank 产品和服务的<b>最新资讯</b>？为此我们将保存您的手机号码和姓名。",
+  "consent_question": "您是否同意对您的手机号码和姓名进行<b>处理</b>，并接收 Hamkorbank 产品和服务的最新资讯？",
   "consent_yes": "同意",
   "consent_no": "不同意",
-  "consent_thanks_yes": "谢谢！您将收到银行产品和服务的最新资讯。",
-  "consent_thanks_no": "好的，我们不会向您发送资讯。",
+  "consent_thanks_yes": "谢谢！您的数据将被处理，您将收到银行产品和服务的最新资讯。",
+  "consent_thanks_no": "好的，未获得同意，我们不会向您发送资讯。",
   "help": "发送 /settings 可更改设置。",
   "need_start": "发送 /start 开始使用。"
 }

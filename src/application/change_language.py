@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from src.domain.entities import Language, User
 from src.domain.repositories import UserRepository
@@ -23,7 +23,10 @@ class ChangeLanguage:
         if user is None:
             raise UserNotFound(telegram_id)
 
-        is_first_choice = not user.is_onboarded
-        user.choose_language(language)
-        await self._users.save(user)
-        return LanguageChangeResult(user=user, is_first_choice=is_first_choice)
+        if not await self._users.set_language(telegram_id, language):
+            raise UserNotFound(telegram_id)
+
+        return LanguageChangeResult(
+            user=replace(user, language=language),
+            is_first_choice=not user.is_onboarded,
+        )
