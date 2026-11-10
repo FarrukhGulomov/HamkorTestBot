@@ -16,7 +16,7 @@ from src.config import Settings
 from src.infrastructure.clock import SystemClock
 from src.infrastructure.db.session import create_engine, create_session_factory, create_tables
 from src.infrastructure.db.user_repository import SqlAlchemyUserRepository
-from src.infrastructure.i18n.translator import Translator
+from src.infrastructure.i18n.translator import JsonTranslator
 from src.infrastructure.scheduler import ConsentScheduler
 from src.presentation.handlers import build_root_router
 from src.presentation.middlewares import ActivityMiddleware
@@ -31,7 +31,7 @@ async def main() -> None:
     await create_tables(engine)
 
     clock = SystemClock()
-    translator = Translator()
+    translator = JsonTranslator()
     users = SqlAlchemyUserRepository(create_session_factory(engine))
 
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))

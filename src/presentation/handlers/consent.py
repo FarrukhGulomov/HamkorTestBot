@@ -2,9 +2,9 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
 from src.application.change_language import UserNotFound
+from src.application.ports import Translator
 from src.application.save_consent import SaveConsent
 from src.domain.entities import DEFAULT_LANGUAGE, ConsentStatus
-from src.infrastructure.i18n.translator import Translator
 from src.presentation.callbacks import CONSENT_DONE, ConsentCallback
 from src.presentation.keyboards import consent_answered_keyboard
 

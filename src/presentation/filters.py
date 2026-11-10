@@ -1,7 +1,7 @@
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
 
-from src.infrastructure.i18n.translator import Translator
+from src.application.ports import Translator
 
 
 class TextKey(BaseFilter):

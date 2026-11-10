@@ -6,8 +6,8 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from src.application.ports import Translator
 from src.domain.entities import Language
-from src.infrastructure.i18n.translator import Translator
 from src.presentation.callbacks import CONSENT_DONE, ConsentCallback, LanguageCallback
 
 LANGUAGE_LABELS: dict[Language, str] = {

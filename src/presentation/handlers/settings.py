@@ -4,8 +4,8 @@ from aiogram.types import CallbackQuery, Message
 
 from src.application.change_language import ChangeLanguage, UserNotFound
 from src.application.get_user import GetUser
+from src.application.ports import Translator
 from src.domain.entities import DEFAULT_LANGUAGE
-from src.infrastructure.i18n.translator import Translator
 from src.presentation.callbacks import LanguageCallback
 from src.presentation.filters import TextKey
 from src.presentation.keyboards import language_keyboard, main_menu_keyboard

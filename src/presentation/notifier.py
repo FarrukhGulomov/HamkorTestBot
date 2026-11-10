@@ -1,9 +1,8 @@
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
-from src.application.ports import ConsentNotifier, PermanentDeliveryError
+from src.application.ports import ConsentNotifier, PermanentDeliveryError, Translator
 from src.domain.entities import User
-from src.infrastructure.i18n.translator import Translator
 from src.presentation.keyboards import consent_keyboard
 
 

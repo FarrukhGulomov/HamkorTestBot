@@ -15,7 +15,7 @@ from src.application.request_consent import RequestConsent
 from src.application.save_consent import SaveConsent
 from src.application.track_activity import TrackActivity
 from src.domain.entities import ConsentStatus, Language
-from src.infrastructure.i18n.translator import Translator
+from src.infrastructure.i18n.translator import JsonTranslator
 from src.presentation.callbacks import ConsentCallback, LanguageCallback
 from src.presentation.handlers import build_root_router
 from src.presentation.middlewares import ActivityMiddleware
@@ -61,8 +61,8 @@ def bot(session) -> Bot:
 
 
 @pytest.fixture
-def translator() -> Translator:
-    return Translator()
+def translator() -> JsonTranslator:
+    return JsonTranslator()
 
 
 @pytest.fixture

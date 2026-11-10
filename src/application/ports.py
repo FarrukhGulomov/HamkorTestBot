@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from src.domain.entities import User
+from src.domain.entities import Language, User
 
 
 class Clock(ABC):
@@ -19,3 +19,13 @@ class ConsentNotifier(ABC):
     async def send_consent_request(self, user: User) -> None:
         """Foydalanuvchiga rozilik so'rovini yuboradi.
         Qayta urinish foyda bermaydigan xatoda PermanentDeliveryError ko'taradi."""
+
+
+class Translator(ABC):
+    @abstractmethod
+    def get(self, language: Language, key: str, **params: object) -> str:
+        """Kalitning berilgan tildagi matni; topilmasa standart tildagisi."""
+
+    @abstractmethod
+    def all_translations(self, key: str) -> set[str]:
+        """Bitta kalitning barcha tillardagi matnlari (tugma matnini aniqlash uchun)."""

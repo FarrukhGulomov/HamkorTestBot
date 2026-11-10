@@ -3,9 +3,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from src.application.get_user import GetUser
+from src.application.ports import Translator
 from src.application.register_contact import RegisterContact
 from src.domain.entities import DEFAULT_LANGUAGE
-from src.infrastructure.i18n.translator import Translator
 from src.presentation.keyboards import contact_keyboard, language_keyboard, main_menu_keyboard
 
 

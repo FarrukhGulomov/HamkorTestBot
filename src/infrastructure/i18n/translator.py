@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
 
+from src.application.ports import Translator
 from src.domain.entities import DEFAULT_LANGUAGE, Language
 
 LOCALES_DIR = Path(__file__).parent / "locales"
 
 
-class Translator:
+class JsonTranslator(Translator):
     def __init__(self, locales_dir: Path = LOCALES_DIR) -> None:
         self._messages: dict[Language, dict[str, str]] = {}
         for language in Language:

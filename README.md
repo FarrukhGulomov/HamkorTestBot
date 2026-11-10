@@ -56,8 +56,8 @@ Loyiha Clean Architecture bo'yicha qatlamlarga bo'lingan. Bog'liqlik faqat ichka
 src/
 ├── domain/            # biznes qoidalari: User, Language, ConsentStatus, UserRepository (interfeys)
 ├── application/       # use case'lar: RegisterContact, ChangeLanguage, TrackActivity,
-│                      #   RequestConsent, SaveConsent, GetUser + portlar (Clock, ConsentNotifier)
-├── infrastructure/    # SQLAlchemy repozitoriy, tarjimalar (JSON), fon scheduler, tizim vaqti
+│                      #   RequestConsent, SaveConsent, GetUser + portlar (Clock, ConsentNotifier, Translator)
+├── infrastructure/    # SQLAlchemy repozitoriy, JSON tarjimalar, fon scheduler, tizim vaqti
 ├── presentation/      # aiogram: handlerlar, klaviaturalar, middleware, Telegram orqali xabar yuboruvchi
 ├── config.py          # .env dan sozlamalarni o'qish
 └── main.py            # composition root: barcha qatlamlar shu yerda bir-biriga ulanadi
@@ -65,6 +65,8 @@ src/
 
 - **domain** hech qanday tashqi kutubxonani import qilmaydi.
 - **application** faqat domain va o'z portlarini biladi. Telegram yoki bazadan xabardor emas.
+- **presentation** `infrastructure` ni import qilmaydi: tarjimalarga `application` dagi `Translator` porti orqali murojaat qiladi.
+- Bu qoidalar `tests/test_architecture.py` da avtomatik tekshiriladi: qatlam ruxsat etilmagan modulni import qilsa, test yiqiladi.
 - Bazani almashtirish uchun faqat `infrastructure/db` o'zgaradi, Telegram o'rniga boshqa kanal ulash uchun faqat `presentation`.
 
 ### Rozilik qanday ishlaydi
