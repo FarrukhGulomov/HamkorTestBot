@@ -4,6 +4,7 @@
   "ask_phone": "To continue, please share your <b>phone number</b> — tap the button below.",
   "share_phone_button": "📱 Share contact",
   "phone_not_own": "Please share your own contact — tap the button below.",
+  "confirm_phone_by_button": "Please confirm your phone number using the button below. Typing the number manually is not allowed.",
   "welcome": "Hi! I'm the Hamkorbank AI assistant. How can I help you?",
   "settings_button": "⚙️ Settings",
   "settings_title": "Choose your language:",

@@ -4,6 +4,7 @@
   "ask_phone": "请点击下方按钮分享您的<b>手机号码</b>以继续。",
   "share_phone_button": "📱 分享联系人",
   "phone_not_own": "请分享您本人的联系方式——点击下方按钮。",
+  "confirm_phone_by_button": "请通过下方按钮确认您的手机号码，不能手动输入号码。",
   "welcome": "您好！我是 Hamkorbank 的 AI 助手，请问有什么可以帮您？",
   "settings_button": "⚙️ 设置",
   "settings_title": "请选择语言：",

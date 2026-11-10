@@ -168,10 +168,26 @@ async def test_idle_user_gets_consent_request_and_answer_is_saved(
     assert session.sent_texts()[-1] == translator.get(Language.UZ, "consent_thanks_yes")
 
 
-async def test_message_from_unregistered_user_asks_to_start(dispatcher, bot, session, translator):
+async def test_typed_phone_number_is_rejected_and_button_is_requested(
+    dispatcher, bot, session, users, translator
+):
+    await dispatcher.feed_update(bot, text_update("/start"))
+
+    await dispatcher.feed_update(bot, text_update("+656565"))
+
+    assert session.sent_texts()[-1] == translator.get(Language.UZ, "confirm_phone_by_button")
+    assert session.requests[-1].reply_markup.keyboard[0][0].request_contact is True
+    assert users.items == {}
+
+
+async def test_text_before_choosing_language_shows_language_choice(
+    dispatcher, bot, session, translator
+):
+    await dispatcher.feed_update(bot, contact_update("998901234567"))
+
     await dispatcher.feed_update(bot, text_update("salom"))
 
-    assert session.sent_texts()[-1] == translator.get(Language.UZ, "need_start")
+    assert session.sent_texts()[-1] == translator.get(Language.UZ, "choose_language")
 
 
 async def test_start_for_registered_user_greets_in_their_language(
