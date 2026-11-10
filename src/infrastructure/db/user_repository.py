@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from src.domain.entities import ConsentStatus, Language, User
-from src.domain.repositories import UserRepository
+from src.domain.repositories import ConsentRequestCriteria, UserRepository
 from src.infrastructure.db.models import UserModel
 
 PENDING = ConsentStatus.PENDING.value
@@ -50,27 +50,34 @@ class SqlAlchemyUserRepository(UserRepository):
         )
         return result > 0
 
-    async def find_awaiting_consent(self, idle_since: datetime) -> list[User]:
-        query = select(UserModel).where(*_awaiting_consent(idle_since))
+    async def find_awaiting_consent(self, criteria: ConsentRequestCriteria) -> list[User]:
+        query = select(UserModel).where(*_awaiting_consent(criteria))
         async with self._session_factory() as session:
             result = await session.scalars(query)
             return [_to_entity(model) for model in result]
 
     async def claim_consent_request(
-        self, telegram_id: int, idle_since: datetime, now: datetime
+        self, telegram_id: int, criteria: ConsentRequestCriteria, now: datetime
     ) -> bool:
         claimed = await self._execute(
             update(UserModel)
-            .where(UserModel.telegram_id == telegram_id, *_awaiting_consent(idle_since))
-            .values(consent_requested_at=now)
+            .where(UserModel.telegram_id == telegram_id, *_awaiting_consent(criteria))
+            .values(consent_claimed_at=now, consent_attempts=UserModel.consent_attempts + 1)
         )
         return claimed > 0
 
-    async def release_consent_request(self, telegram_id: int) -> None:
+    async def complete_consent_request(self, telegram_id: int, now: datetime) -> None:
         await self._execute(
             update(UserModel)
-            .where(UserModel.telegram_id == telegram_id, UserModel.consent_status == PENDING)
-            .values(consent_requested_at=None)
+            .where(UserModel.telegram_id == telegram_id, UserModel.consent_requested_at.is_(None))
+            .values(consent_requested_at=now, consent_claimed_at=None)
+        )
+
+    async def abandon_consent_request(self, telegram_id: int, max_attempts: int) -> None:
+        await self._execute(
+            update(UserModel)
+            .where(UserModel.telegram_id == telegram_id, UserModel.consent_requested_at.is_(None))
+            .values(consent_attempts=max_attempts, consent_claimed_at=None)
         )
 
     async def record_consent(self, telegram_id: int, agreed: bool, now: datetime) -> bool:
@@ -90,12 +97,17 @@ class SqlAlchemyUserRepository(UserRepository):
             return result.rowcount
 
 
-def _awaiting_consent(idle_since: datetime) -> tuple:
+def _awaiting_consent(criteria: ConsentRequestCriteria) -> tuple:
     return (
         UserModel.language.is_not(None),
         UserModel.consent_status == PENDING,
         UserModel.consent_requested_at.is_(None),
-        UserModel.last_message_at <= idle_since,
+        UserModel.consent_attempts < criteria.max_attempts,
+        UserModel.last_message_at <= criteria.idle_since,
+        or_(
+            UserModel.consent_claimed_at.is_(None),
+            UserModel.consent_claimed_at <= criteria.stale_claim_before,
+        ),
     )
 
 
@@ -110,4 +122,6 @@ def _to_entity(model: UserModel) -> User:
         consent_status=ConsentStatus(model.consent_status),
         consent_requested_at=model.consent_requested_at,
         consent_answered_at=model.consent_answered_at,
+        consent_claimed_at=model.consent_claimed_at,
+        consent_attempts=model.consent_attempts or 0,
     )

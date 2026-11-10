@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, String
+from sqlalchemy import BigInteger, DateTime, Integer, String
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
@@ -37,3 +37,5 @@ class UserModel(Base):
     consent_status: Mapped[str] = mapped_column(String(16), default="pending")
     consent_requested_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     consent_answered_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    consent_claimed_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    consent_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

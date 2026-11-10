@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 from src.application.ports import Clock, ConsentNotifier
 from src.domain.entities import ConsentStatus, Language, User
-from src.domain.repositories import UserRepository
+from src.domain.repositories import ConsentRequestCriteria, UserRepository
 
 
 class FakeClock(Clock):
@@ -54,32 +54,44 @@ class InMemoryUserRepository(UserRepository):
         self.items[telegram_id].language = language
         return True
 
-    def _is_awaiting(self, user: User, idle_since: datetime) -> bool:
+    @staticmethod
+    def _is_awaiting(user: User, criteria: ConsentRequestCriteria) -> bool:
         return (
             user.is_onboarded
             and user.consent_status is ConsentStatus.PENDING
             and user.consent_requested_at is None
-            and user.last_message_at <= idle_since
+            and user.consent_attempts < criteria.max_attempts
+            and user.last_message_at <= criteria.idle_since
+            and (
+                user.consent_claimed_at is None
+                or user.consent_claimed_at <= criteria.stale_claim_before
+            )
         )
 
-    async def find_awaiting_consent(self, idle_since: datetime) -> list[User]:
-        return [
-            User(**vars(u)) for u in self.items.values() if self._is_awaiting(u, idle_since)
-        ]
+    async def find_awaiting_consent(self, criteria: ConsentRequestCriteria) -> list[User]:
+        return [User(**vars(u)) for u in self.items.values() if self._is_awaiting(u, criteria)]
 
     async def claim_consent_request(
-        self, telegram_id: int, idle_since: datetime, now: datetime
+        self, telegram_id: int, criteria: ConsentRequestCriteria, now: datetime
     ) -> bool:
         user = self.items.get(telegram_id)
-        if user is None or not self._is_awaiting(user, idle_since):
+        if user is None or not self._is_awaiting(user, criteria):
             return False
-        user.consent_requested_at = now
+        user.consent_claimed_at = now
+        user.consent_attempts += 1
         return True
 
-    async def release_consent_request(self, telegram_id: int) -> None:
+    async def complete_consent_request(self, telegram_id: int, now: datetime) -> None:
         user = self.items.get(telegram_id)
-        if user and user.consent_status is ConsentStatus.PENDING:
-            user.consent_requested_at = None
+        if user and user.consent_requested_at is None:
+            user.consent_requested_at = now
+            user.consent_claimed_at = None
+
+    async def abandon_consent_request(self, telegram_id: int, max_attempts: int) -> None:
+        user = self.items.get(telegram_id)
+        if user and user.consent_requested_at is None:
+            user.consent_attempts = max_attempts
+            user.consent_claimed_at = None
 
     async def record_consent(self, telegram_id: int, agreed: bool, now: datetime) -> bool:
         user = self.items.get(telegram_id)

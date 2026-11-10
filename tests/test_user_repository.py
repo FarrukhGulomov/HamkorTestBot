@@ -2,15 +2,22 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import text
 
 from src.application.ports import ConsentNotifier
 from src.application.request_consent import RequestConsent
 from src.domain.entities import ConsentStatus, Language, User
+from src.domain.repositories import ConsentRequestCriteria
 from src.infrastructure.db.session import create_engine, create_session_factory, create_tables
 from src.infrastructure.db.user_repository import SqlAlchemyUserRepository
 from tests.fakes import FakeClock
 
 NOW = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
+LEASE = timedelta(minutes=1)
+
+
+def criteria(idle_since: datetime, now: datetime = NOW, max_attempts: int = 3) -> ConsentRequestCriteria:
+    return ConsentRequestCriteria(idle_since, now - LEASE, max_attempts)
 
 
 @pytest.fixture
@@ -68,16 +75,57 @@ async def test_record_consent_only_once(repository):
     assert stored.consent_answered_at == NOW
 
 
-async def test_claim_is_exclusive_and_release_allows_retry(repository):
+async def test_claim_is_exclusive_until_the_lease_expires(repository):
     await repository.upsert_contact(1, "+998901234567", "Jasur", NOW)
     await repository.set_language(1, Language.UZ)
-    idle_since = NOW + timedelta(minutes=1)
+    idle = NOW + timedelta(minutes=1)
 
-    assert await repository.claim_consent_request(1, idle_since, NOW) is True
-    assert await repository.claim_consent_request(1, idle_since, NOW) is False
+    assert await repository.claim_consent_request(1, criteria(idle), NOW) is True
+    assert await repository.claim_consent_request(1, criteria(idle), NOW) is False
 
-    await repository.release_consent_request(1)
-    assert await repository.claim_consent_request(1, idle_since, NOW) is True
+    later = NOW + LEASE + timedelta(seconds=1)
+    assert await repository.claim_consent_request(1, criteria(idle, later), later) is True
+    assert (await repository.get(1)).consent_attempts == 2
+
+
+async def test_completed_request_is_never_claimed_again(repository):
+    await repository.upsert_contact(1, "+998901234567", "Jasur", NOW)
+    await repository.set_language(1, Language.UZ)
+    idle = NOW + timedelta(minutes=1)
+    await repository.claim_consent_request(1, criteria(idle), NOW)
+
+    await repository.complete_consent_request(1, NOW)
+
+    later = NOW + timedelta(hours=1)
+    stored = await repository.get(1)
+    assert stored.consent_requested_at == NOW
+    assert stored.consent_claimed_at is None
+    assert await repository.claim_consent_request(1, criteria(idle, later), later) is False
+
+
+async def test_attempts_are_capped(repository):
+    await repository.upsert_contact(1, "+998901234567", "Jasur", NOW)
+    await repository.set_language(1, Language.UZ)
+    idle = NOW + timedelta(minutes=1)
+    moment = NOW
+
+    for _ in range(3):
+        assert await repository.claim_consent_request(1, criteria(idle, moment), moment) is True
+        moment += LEASE + timedelta(seconds=1)
+
+    assert await repository.claim_consent_request(1, criteria(idle, moment), moment) is False
+
+
+async def test_abandoned_request_is_not_claimed_again(repository):
+    await repository.upsert_contact(1, "+998901234567", "Jasur", NOW)
+    await repository.set_language(1, Language.UZ)
+    idle = NOW + timedelta(minutes=1)
+    await repository.claim_consent_request(1, criteria(idle), NOW)
+
+    await repository.abandon_consent_request(1, max_attempts=3)
+
+    later = NOW + timedelta(hours=1)
+    assert await repository.claim_consent_request(1, criteria(idle, later), later) is False
 
 
 async def test_claim_fails_when_user_wrote_after_selection(repository):
@@ -85,7 +133,33 @@ async def test_claim_fails_when_user_wrote_after_selection(repository):
     await repository.set_language(1, Language.UZ)
     await repository.touch(1, NOW + timedelta(minutes=2))
 
-    assert await repository.claim_consent_request(1, NOW + timedelta(minutes=1), NOW) is False
+    assert await repository.claim_consent_request(1, criteria(NOW + timedelta(minutes=1)), NOW) is False
+
+
+async def test_old_database_without_new_columns_is_upgraded(tmp_path):
+    url = f"sqlite+aiosqlite:///{tmp_path / 'old.db'}"
+    engine = create_engine(url)
+    async with engine.begin() as connection:
+        await connection.execute(text(
+            "CREATE TABLE users (telegram_id BIGINT PRIMARY KEY, phone_number VARCHAR(32), "
+            "first_name VARCHAR(255), language VARCHAR(16), created_at DATETIME, "
+            "last_message_at DATETIME, consent_status VARCHAR(16), "
+            "consent_requested_at DATETIME, consent_answered_at DATETIME)"
+        ))
+        await connection.execute(text(
+            "INSERT INTO users VALUES (1, '+998901234567', 'Jasur', 'uz', "
+            "'2025-01-01 12:00:00', '2025-01-01 12:00:00', 'pending', '2025-01-01 12:05:00', NULL)"
+        ))
+
+    await create_tables(engine)
+
+    repository = SqlAlchemyUserRepository(create_session_factory(engine))
+    user = await repository.get(1)
+    assert user.language is Language.UZ
+    assert user.consent_requested_at == datetime(2025, 1, 1, 12, 5, tzinfo=UTC)
+    assert user.consent_attempts == 0
+    assert user.consent_claimed_at is None
+    await engine.dispose()
 
 
 class SlowNotifier(ConsentNotifier):
@@ -105,7 +179,7 @@ async def test_changes_made_while_request_is_being_sent_are_not_lost(repository)
     await repository.upsert_contact(1, "+998901234567", "Jasur", NOW)
     await repository.set_language(1, Language.UZ)
     notifier = SlowNotifier()
-    use_case = RequestConsent(repository, notifier, clock, timedelta(minutes=3))
+    use_case = RequestConsent(repository, notifier, clock, timedelta(minutes=3), claim_lease=LEASE)
 
     sending = asyncio.create_task(use_case.execute())
     await notifier.started.wait()
@@ -137,10 +211,10 @@ async def test_find_awaiting_consent_filters_users(repository):
     await add(2, Language.UZ, NOW + timedelta(minutes=1))
     await add(3, None, old)
     await add(4, Language.UZ, old)
-    await repository.claim_consent_request(4, NOW, NOW)
+    await repository.claim_consent_request(4, criteria(NOW), NOW)
     await add(5, Language.UZ, old)
     await repository.record_consent(5, True, NOW)
 
-    found = await repository.find_awaiting_consent(NOW)
+    found = await repository.find_awaiting_consent(criteria(NOW))
 
     assert [user.telegram_id for user in found] == [1]

@@ -9,11 +9,11 @@
   "settings_button": "⚙️ Settings",
   "settings_title": "Choose your language:",
   "language_changed": "Language changed ✅",
-  "consent_question": "Do you agree to the <b>processing</b> of your phone number and name, and to receiving news about Hamkorbank products and services?",
+  "consent_question": "Do you agree to the <b>processing</b> of your personal data (phone number and name)?",
   "consent_yes": "I agree",
   "consent_no": "No",
-  "consent_thanks_yes": "Thank you! Your data will be processed and you will now receive news about the bank's products and services.",
-  "consent_thanks_no": "Understood, consent was not given. We won't send you any news.",
+  "consent_thanks_yes": "Thank you! Your consent has been recorded.",
+  "consent_thanks_no": "Understood, consent was not given.",
   "help": "Send /settings to change your settings.",
   "need_start": "Send /start to begin."
 }

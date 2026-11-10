@@ -9,6 +9,7 @@ from src.application.request_consent import RequestConsent
 from src.application.save_consent import SaveConsent
 from src.application.track_activity import TrackActivity
 from src.domain.entities import ConsentStatus, Language
+from src.domain.repositories import ConsentRequestCriteria
 from tests.fakes import RecordingNotifier
 
 IDLE = timedelta(minutes=3)
@@ -19,8 +20,16 @@ async def onboard(users, clock, telegram_id: int = 1) -> None:
     await ChangeLanguage(users).execute(telegram_id, Language.UZ)
 
 
-def make_request_consent(users, clock, notifier) -> RequestConsent:
-    return RequestConsent(users, notifier, clock, IDLE)
+LEASE = timedelta(minutes=1)
+
+
+def make_request_consent(users, clock, notifier, max_attempts: int = 5) -> RequestConsent:
+    return RequestConsent(users, notifier, clock, IDLE, claim_lease=LEASE, max_attempts=max_attempts)
+
+
+def criteria_at(clock, max_attempts: int = 5) -> ConsentRequestCriteria:
+    now = clock.now()
+    return ConsentRequestCriteria(now - IDLE, now - LEASE, max_attempts)
 
 
 async def test_no_request_before_three_minutes(users, clock):
@@ -73,34 +82,38 @@ async def test_user_without_language_is_not_asked(users, clock):
     assert notifier.sent_to == []
 
 
-async def test_transient_failure_is_retried_on_next_check(users, clock):
+async def test_transient_failure_is_retried_after_the_lease_expires(users, clock):
     await onboard(users, clock)
     notifier = RecordingNotifier(error=RuntimeError("network is down"))
     use_case = make_request_consent(users, clock, notifier)
     clock.advance(minutes=3)
 
     assert await use_case.execute() == 0
-    assert users.items[1].consent_requested_at is None
-
     notifier.error = None
+    assert await use_case.execute() == 0  # egallash muddati hali tugamagan
+
+    clock.advance(minutes=1, seconds=1)
     assert await use_case.execute() == 1
     assert notifier.sent_to == [1]
     assert users.items[1].consent_requested_at is not None
+    assert users.items[1].consent_claimed_at is None
 
 
-async def test_transient_failures_are_limited(users, clock):
+async def test_attempts_are_limited_even_across_restarts(users, clock):
     await onboard(users, clock)
     notifier = RecordingNotifier(error=RuntimeError("network is down"))
-    use_case = RequestConsent(users, notifier, clock, IDLE, max_attempts=3)
     clock.advance(minutes=3)
 
     for _ in range(3):
-        await use_case.execute()
-    notifier.error = None
-    await use_case.execute()
+        # Har safar yangi obyekt: jarayon qayta ishga tushgandek
+        await make_request_consent(users, clock, notifier, max_attempts=3).execute()
+        clock.advance(minutes=2)
 
+    notifier.error = None
+    await make_request_consent(users, clock, notifier, max_attempts=3).execute()
+
+    assert users.items[1].consent_attempts == 3
     assert notifier.sent_to == []
-    assert users.items[1].consent_requested_at is not None
 
 
 async def test_permanent_failure_is_not_retried(users, clock):
@@ -111,9 +124,25 @@ async def test_permanent_failure_is_not_retried(users, clock):
 
     await use_case.execute()
     notifier.error = None
+    clock.advance(minutes=5)
     await use_case.execute()
 
     assert notifier.sent_to == []
+
+
+async def test_request_is_recovered_after_the_process_died_mid_send(users, clock):
+    await onboard(users, clock)
+    clock.advance(minutes=3)
+    # Jarayon so'rovni egalladi-yu, yuborishga ulgurmay to'xtadi
+    assert await users.claim_consent_request(1, criteria_at(clock), clock.now()) is True
+    notifier = RecordingNotifier()
+    use_case = make_request_consent(users, clock, notifier)
+
+    assert await use_case.execute() == 0  # muddat tugamaguncha boshqa jarayon aralashmaydi
+
+    clock.advance(minutes=1, seconds=1)
+    assert await use_case.execute() == 1
+    assert notifier.sent_to == [1]
 
 
 async def test_user_who_wrote_after_selection_is_skipped(users, clock):
@@ -121,11 +150,12 @@ async def test_user_who_wrote_after_selection_is_skipped(users, clock):
     notifier = RecordingNotifier()
     use_case = make_request_consent(users, clock, notifier)
     clock.advance(minutes=3)
-    candidates = await users.find_awaiting_consent(clock.now() - IDLE)
+    criteria = criteria_at(clock)
+    candidates = await users.find_awaiting_consent(criteria)
     # Tanlab olingandan keyin foydalanuvchi yozib yubordi
     await users.touch(1, clock.now())
 
-    claimed = await users.claim_consent_request(1, clock.now() - IDLE, clock.now())
+    claimed = await users.claim_consent_request(1, criteria, clock.now())
 
     assert [u.telegram_id for u in candidates] == [1]
     assert claimed is False

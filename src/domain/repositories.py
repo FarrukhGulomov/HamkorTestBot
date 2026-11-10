@@ -1,7 +1,20 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
 
 from src.domain.entities import Language, User
+
+
+@dataclass(frozen=True)
+class ConsentRequestCriteria:
+    """Rozilik so'rovi yuborilishi mumkin bo'lgan foydalanuvchilarni tanlash shartlari."""
+
+    idle_since: datetime
+    """Oxirgi xabari shu vaqtdan oldin yozilgan bo'lishi kerak."""
+    stale_claim_before: datetime
+    """Shu vaqtdan oldin egallangan, ammo yakunlanmagan so'rov eskirgan hisoblanadi."""
+    max_attempts: int
+    """Shuncha marta uringandan keyin foydalanuvchiga qayta urinilmaydi."""
 
 
 class UserRepository(ABC):
@@ -27,21 +40,25 @@ class UserRepository(ABC):
         """Tilni o'zgartiradi. Foydalanuvchi topilmasa False qaytaradi."""
 
     @abstractmethod
-    async def find_awaiting_consent(self, idle_since: datetime) -> list[User]:
-        """Til tanlagan, oxirgi xabari `idle_since` dan oldin yozilgan
-        va hali roziligi so'ralmagan foydalanuvchilar."""
+    async def find_awaiting_consent(self, criteria: ConsentRequestCriteria) -> list[User]:
+        """Til tanlagan, roziligi hali so'ralmagan va shartlarga mos foydalanuvchilar."""
 
     @abstractmethod
     async def claim_consent_request(
-        self, telegram_id: int, idle_since: datetime, now: datetime
+        self, telegram_id: int, criteria: ConsentRequestCriteria, now: datetime
     ) -> bool:
-        """Rozilik so'rovini yuborish huquqini atomar egallaydi.
-        Shartlar hamon bajarilsa True qaytaradi (foydalanuvchi shu orada yozgan,
-        javob bergan yoki boshqa jarayon egallagan bo'lsa False)."""
+        """Rozilik so'rovini yuborish huquqini atomar egallaydi va urinishlar sonini oshiradi.
+        Shartlar hamon bajarilsa True qaytaradi (foydalanuvchi shu orada yozgan, javob bergan
+        yoki boshqa jarayon egallagan bo'lsa False). Egallash vaqtincha: yakunlanmasa,
+        `stale_claim_before` dan keyin so'rov qayta olinadi."""
 
     @abstractmethod
-    async def release_consent_request(self, telegram_id: int) -> None:
-        """Yuborib bo'lmagan so'rovni qaytaradi, keyingi tekshiruvda qayta uriniladi."""
+    async def complete_consent_request(self, telegram_id: int, now: datetime) -> None:
+        """So'rov yetkazilganini belgilaydi."""
+
+    @abstractmethod
+    async def abandon_consent_request(self, telegram_id: int, max_attempts: int) -> None:
+        """Yetkazib bo'lmaydigan so'rovga qayta urinishni to'xtatadi."""
 
     @abstractmethod
     async def record_consent(self, telegram_id: int, agreed: bool, now: datetime) -> bool:

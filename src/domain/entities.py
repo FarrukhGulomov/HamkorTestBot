@@ -32,6 +32,8 @@ class User:
     consent_status: ConsentStatus = ConsentStatus.PENDING
     consent_requested_at: datetime | None = None
     consent_answered_at: datetime | None = None
+    consent_claimed_at: datetime | None = None
+    consent_attempts: int = 0
 
     @property
     def is_onboarded(self) -> bool:

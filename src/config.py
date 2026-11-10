@@ -7,4 +7,4 @@ class Settings(BaseSettings):
     bot_token: str
     database_url: str = "sqlite+aiosqlite:///./hamkor_bot.db"
     consent_idle_seconds: int = 180
-    consent_check_interval_seconds: int = 30
+    consent_check_interval_seconds: int = 5
