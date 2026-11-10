@@ -1,6 +1,7 @@
 {
   "choose_language": "Tilni tanlang · Тилни танланг\nВыберите язык · Choose language\nTildi saylań · 请选择语言",
-  "ask_phone": "Assalawma áleykum! Hamkorbank AI-járdemshisine xosh keldińiz.\n\nDawam etiw ushın <b>telefon nomerińizdi</b> ulasıń — tómendegi túymeni basıń.",
+  "start_greeting": "Assalawma áleykum! Hamkorbank AI-járdemshisine xosh keldińiz.",
+  "ask_phone": "Dawam etiw ushın <b>telefon nomerińizdi</b> ulasıń — tómendegi túymeni basıń.",
   "share_phone_button": "📱 Kontaktti ulasıw",
   "phone_not_own": "Iltimas, óz kontaktińizdi ulasıń — tómendegi túymeni basıń.",
   "welcome": "Sálem! Men Hamkorbanktiń AI-járdemshisimen. Sizge qanday járdem bere alaman?",

@@ -1,6 +1,7 @@
 {
   "choose_language": "Tilni tanlang · Тилни танланг\nВыберите язык · Choose language\nTildi saylań · 请选择语言",
-  "ask_phone": "Assalomu alaykum! Hamkorbank AI-yordamchisiga xush kelibsiz.\n\nDavom etish uchun <b>telefon raqamingizni</b> ulashing — pastdagi tugmani bosing.",
+  "start_greeting": "Assalomu alaykum! Hamkorbank AI-yordamchisiga xush kelibsiz.",
+  "ask_phone": "Davom etish uchun <b>telefon raqamingizni</b> ulashing — pastdagi tugmani bosing.",
   "share_phone_button": "📱 Kontaktni ulashish",
   "phone_not_own": "Iltimos, o'zingizning kontaktingizni ulashing — pastdagi tugmani bosing.",
   "welcome": "Salom! Men Hamkorbankning AI-yordamchisiman. Sizga qanday yordam berishim mumkin?",

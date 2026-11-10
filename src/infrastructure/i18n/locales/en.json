@@ -1,6 +1,7 @@
 {
   "choose_language": "Tilni tanlang · Тилни танланг\nВыберите язык · Choose language\nTildi saylań · 请选择语言",
-  "ask_phone": "Hello! Welcome to the Hamkorbank AI assistant.\n\nTo continue, please share your <b>phone number</b> — tap the button below.",
+  "start_greeting": "Hello! Welcome to the Hamkorbank AI assistant.",
+  "ask_phone": "To continue, please share your <b>phone number</b> — tap the button below.",
   "share_phone_button": "📱 Share contact",
   "phone_not_own": "Please share your own contact — tap the button below.",
   "welcome": "Hi! I'm the Hamkorbank AI assistant. How can I help you?",

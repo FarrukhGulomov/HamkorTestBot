@@ -108,7 +108,9 @@ def callback_update(data: str) -> Update:
 
 async def test_full_onboarding_flow(dispatcher, bot, session, users, translator):
     await dispatcher.feed_update(bot, text_update("/start"))
-    assert session.sent_texts()[-1] == translator.get(Language.UZ, "ask_phone")
+    first_message = session.sent_texts()[-1]
+    assert first_message.startswith(translator.get(Language.UZ, "start_greeting"))
+    assert first_message.endswith(translator.get(Language.UZ, "ask_phone"))
 
     await dispatcher.feed_update(bot, contact_update("998901234567"))
     assert session.sent_texts()[-1] == translator.get(Language.UZ, "choose_language")
@@ -170,3 +172,17 @@ async def test_message_from_unregistered_user_asks_to_start(dispatcher, bot, ses
     await dispatcher.feed_update(bot, text_update("salom"))
 
     assert session.sent_texts()[-1] == translator.get(Language.UZ, "need_start")
+
+
+async def test_start_for_registered_user_greets_in_their_language(
+    dispatcher, bot, session, translator
+):
+    await dispatcher.feed_update(bot, contact_update("998901234567"))
+    await dispatcher.feed_update(bot, callback_update(LanguageCallback(language=Language.RU).pack()))
+
+    await dispatcher.feed_update(bot, text_update("/start"))
+
+    assert session.sent_texts()[-2:] == [
+        translator.get(Language.RU, "start_greeting"),
+        translator.get(Language.RU, "welcome"),
+    ]

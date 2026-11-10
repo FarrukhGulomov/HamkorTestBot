@@ -18,7 +18,7 @@ def build_router() -> Router:
 
         if user is None:
             await message.answer(
-                translator.get(DEFAULT_LANGUAGE, "ask_phone"),
+                _greeting_with_phone_request(translator),
                 reply_markup=contact_keyboard(translator, DEFAULT_LANGUAGE),
             )
         elif not user.is_onboarded:
@@ -27,11 +27,11 @@ def build_router() -> Router:
                 reply_markup=language_keyboard(),
             )
         else:
+            await message.answer(translator.get(user.language, "start_greeting"))
             await message.answer(
                 translator.get(user.language, "welcome"),
                 reply_markup=main_menu_keyboard(translator, user.language),
             )
-
 
     @router.message(F.contact)
     async def receive_contact(
@@ -64,3 +64,9 @@ def build_router() -> Router:
         )
 
     return router
+
+
+def _greeting_with_phone_request(translator: Translator) -> str:
+    greeting = translator.get(DEFAULT_LANGUAGE, "start_greeting")
+    ask_phone = translator.get(DEFAULT_LANGUAGE, "ask_phone")
+    return f"{greeting}\n\n{ask_phone}"
