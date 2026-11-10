@@ -42,3 +42,20 @@ class User:
     @property
     def effective_language(self) -> Language:
         return self.language or DEFAULT_LANGUAGE
+
+
+class Rating(StrEnum):
+    LIKE = "like"
+    DISLIKE = "dislike"
+
+
+@dataclass
+class Interaction:
+    """Foydalanuvchi savoli, botning javobi va foydalanuvchi bergan baho."""
+
+    id: int
+    telegram_id: int
+    question: str
+    answer: str
+    created_at: datetime
+    rating: Rating | None = None

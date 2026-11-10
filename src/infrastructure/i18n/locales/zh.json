@@ -14,6 +14,7 @@
   "consent_no": "不同意",
   "consent_thanks_yes": "谢谢！已记录您的同意。",
   "consent_thanks_no": "好的，未获得您的同意。",
-  "help": "发送 /settings 可更改设置。",
-  "need_start": "发送 /start 开始使用。"
+  "need_start": "发送 /start 开始使用。",
+  "rating_thanks": "谢谢，已收到您的评价！",
+  "text_only": "请以文字形式输入您的问题。"
 }

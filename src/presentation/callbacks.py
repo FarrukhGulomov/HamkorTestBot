@@ -11,4 +11,10 @@ class ConsentCallback(CallbackData, prefix="consent"):
     agreed: bool
 
 
+class RatingCallback(CallbackData, prefix="rate"):
+    interaction_id: int
+    positive: bool
+
+
 CONSENT_DONE = "consent_done"
+RATING_DONE = "rating_done"

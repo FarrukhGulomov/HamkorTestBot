@@ -1,0 +1,111 @@
+{
+  "topics": {
+    "deposit": {
+      "keywords": {
+        "uz": [
+          "omonat",
+          "depozit"
+        ],
+        "uz_cyrl": [
+          "омонат",
+          "депозит"
+        ],
+        "ru": [
+          "вклад",
+          "депозит"
+        ],
+        "en": [
+          "deposit"
+        ],
+        "kaa": [
+          "omanat",
+          "depozit"
+        ],
+        "zh": [
+          "存款"
+        ]
+      },
+      "answers": {
+        "uz": "Hamkorbankda bir nechta omonat turi mavjud. Yillik foiz stavkasi muddat va valyutaga qarab <b>XX%</b> gacha. Minimal summa — <b>XXX so'm</b>. Omonatni filialda ochish mumkin. Batafsil: <b>1256</b>.",
+        "uz_cyrl": "Ҳамкорбанкда бир нечта омонат тури мавжуд. Йиллик фоиз ставкаси муддат ва валютага қараб <b>XX%</b> гача. Минимал сумма — <b>XXX сўм</b>. Омонатни филиалда очиш мумкин. Батафсил: <b>1256</b>.",
+        "ru": "В Хамкорбанке есть несколько видов вкладов. Годовая процентная ставка — до <b>XX%</b> в зависимости от срока и валюты. Минимальная сумма — <b>XXX сум</b>. Вклад можно открыть в отделении. Подробнее: <b>1256</b>.",
+        "en": "Hamkorbank offers several types of deposits. The annual interest rate is up to <b>XX%</b> depending on the term and currency. The minimum amount is <b>XXX UZS</b>. You can open a deposit at a branch. Details: <b>1256</b>.",
+        "kaa": "Hamkorbankte bir neshe omanat túri bar. Jıllıq procent stavkası múddet hám valyutaǵa qaray <b>XX%</b> ǵa shekem. Minimal summa — <b>XXX swm</b>. Omanattı filialda ashıw múmkin. Batafsıl: <b>1256</b>.",
+        "zh": "Hamkorbank 提供多种存款产品。年利率视期限和币种而定，最高可达 <b>XX%</b>。最低金额为 <b>XXX 苏姆</b>。可在分行开立存款。详情：<b>1256</b>。"
+      }
+    },
+    "credit": {
+      "keywords": {
+        "uz": [
+          "kredit",
+          "qarz"
+        ],
+        "uz_cyrl": [
+          "кредит",
+          "қарз"
+        ],
+        "ru": [
+          "кредит",
+          "займ"
+        ],
+        "en": [
+          "loan",
+          "credit"
+        ],
+        "kaa": [
+          "kredit"
+        ],
+        "zh": [
+          "贷款"
+        ]
+      },
+      "answers": {
+        "uz": "Hamkorbank turli maqsadlar uchun kreditlar taklif etadi. Foiz stavkasi va muddat kredit turiga bog'liq: yillik <b>XX%</b> dan. Ariza berish uchun filialga murojaat qiling. Batafsil: <b>1256</b>.",
+        "uz_cyrl": "Ҳамкорбанк турли мақсадлар учун кредитлар таклиф этади. Фоиз ставкаси ва муддат кредит турига боғлиқ: йиллик <b>XX%</b> дан. Ариза бериш учун филиалга мурожаат қилинг. Батафсил: <b>1256</b>.",
+        "ru": "Хамкорбанк предлагает кредиты для разных целей. Процентная ставка и срок зависят от вида кредита: от <b>XX%</b> годовых. Для подачи заявки обратитесь в отделение. Подробнее: <b>1256</b>.",
+        "en": "Hamkorbank offers loans for different purposes. The interest rate and term depend on the loan type: from <b>XX%</b> per year. To apply, please visit a branch. Details: <b>1256</b>.",
+        "kaa": "Hamkorbank túrli maqsetler ushın kreditler usınadı. Procent stavkası hám múddet kredit túrine baylanıslı: jıllıq <b>XX%</b> tan. Ótinish beriw ushın filialǵa murajat etiń. Batafsıl: <b>1256</b>.",
+        "zh": "Hamkorbank 为不同用途提供贷款。利率和期限取决于贷款类型，年利率 <b>XX%</b> 起。申请请前往分行办理。详情：<b>1256</b>。"
+      }
+    },
+    "card": {
+      "keywords": {
+        "uz": [
+          "karta"
+        ],
+        "uz_cyrl": [
+          "карта"
+        ],
+        "ru": [
+          "карт"
+        ],
+        "en": [
+          "card"
+        ],
+        "kaa": [
+          "karta"
+        ],
+        "zh": [
+          "银行卡",
+          "卡"
+        ]
+      },
+      "answers": {
+        "uz": "Hamkorbankda plastik kartalarni filialda rasmiylashtirish mumkin. Karta turlari va xizmat narxlari haqida batafsil: <b>1256</b>.",
+        "uz_cyrl": "Ҳамкорбанкда пластик карталарни филиалда расмийлаштириш мумкин. Карта турлари ва хизмат нархлари ҳақида батафсил: <b>1256</b>.",
+        "ru": "Пластиковые карты Хамкорбанка можно оформить в отделении. Подробнее о видах карт и стоимости обслуживания: <b>1256</b>.",
+        "en": "You can get a Hamkorbank plastic card at a branch. For details on card types and service fees: <b>1256</b>.",
+        "kaa": "Hamkorbankte plastik kartalardı filialda rásmiylestiriw múmkin. Karta túrleri hám xızmet bahaları haqqında batafsıl: <b>1256</b>.",
+        "zh": "您可在分行办理 Hamkorbank 银行卡。有关卡种及服务费用的详情：<b>1256</b>。"
+      }
+    }
+  },
+  "default": {
+    "uz": "Savolingiz uchun rahmat! Hamkorbank omonat, kredit va kartalari haqida so'rang yoki <b>1256</b> raqamiga qo'ng'iroq qiling.",
+    "uz_cyrl": "Саволингиз учун раҳмат! Ҳамкорбанк омонат, кредит ва карталари ҳақида сўранг ёки <b>1256</b> рақамига қўнғироқ қилинг.",
+    "ru": "Спасибо за вопрос! Спросите о вкладах, кредитах и картах Хамкорбанка или позвоните по номеру <b>1256</b>.",
+    "en": "Thanks for your question! Ask about Hamkorbank deposits, loans or cards, or call <b>1256</b>.",
+    "kaa": "Sorawıńız ushın raxmet! Hamkorbank omanat, kredit hám kartaları haqqında sorań yamasa <b>1256</b> nomerine qońıraw etiń.",
+    "zh": "感谢您的提问！您可以咨询 Hamkorbank 的存款、贷款或银行卡业务，也可拨打 <b>1256</b>。"
+  }
+}

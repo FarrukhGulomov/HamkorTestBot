@@ -29,3 +29,10 @@ class Translator(ABC):
     @abstractmethod
     def all_translations(self, key: str) -> set[str]:
         """Bitta kalitning barcha tillardagi matnlari (tugma matnini aniqlash uchun)."""
+
+
+class AnswerProvider(ABC):
+    """Savolga qisqa javob beruvchi manba (hozir FAQ, keyin LLM bilan almashtirish mumkin)."""
+
+    @abstractmethod
+    async def answer(self, question: str, language: Language) -> str: ...

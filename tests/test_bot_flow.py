@@ -8,15 +8,18 @@ from aiogram.client.session.base import BaseSession
 from aiogram.methods import SendMessage, TelegramMethod
 from aiogram.types import Chat, Contact, Message, Update, User as TgUser, CallbackQuery
 
+from src.application.answer_question import AnswerQuestion
 from src.application.change_language import ChangeLanguage
 from src.application.get_user import GetUser
+from src.application.rate_answer import RateAnswer
 from src.application.register_contact import RegisterContact
 from src.application.request_consent import RequestConsent
 from src.application.save_consent import SaveConsent
 from src.application.track_activity import TrackActivity
-from src.domain.entities import ConsentStatus, Language
+from src.domain.entities import ConsentStatus, Language, Rating
+from src.infrastructure.faq.answer_provider import FaqAnswerProvider
 from src.infrastructure.i18n.translator import JsonTranslator
-from src.presentation.callbacks import ConsentCallback, LanguageCallback
+from src.presentation.callbacks import ConsentCallback, LanguageCallback, RatingCallback
 from src.presentation.handlers import build_root_router
 from src.presentation.middlewares import ActivityMiddleware
 from src.presentation.notifier import TelegramConsentNotifier
@@ -66,7 +69,7 @@ def translator() -> JsonTranslator:
 
 
 @pytest.fixture
-def dispatcher(users, clock, translator) -> Dispatcher:
+def dispatcher(users, interactions, clock, translator) -> Dispatcher:
     dp = Dispatcher()
     dp.workflow_data.update(
         translator=translator,
@@ -74,6 +77,8 @@ def dispatcher(users, clock, translator) -> Dispatcher:
         register_contact=RegisterContact(users, clock),
         change_language=ChangeLanguage(users),
         save_consent=SaveConsent(users, clock),
+        answer_question=AnswerQuestion(users, interactions, FaqAnswerProvider(), clock),
+        rate_answer=RateAnswer(interactions, clock),
     )
     dp.message.outer_middleware(ActivityMiddleware(TrackActivity(users, clock)))
     dp.include_router(build_root_router())
@@ -202,3 +207,55 @@ async def test_start_for_registered_user_greets_in_their_language(
         translator.get(Language.RU, "start_greeting"),
         translator.get(Language.RU, "welcome"),
     ]
+
+
+async def onboard(dispatcher, bot, language: Language) -> None:
+    await dispatcher.feed_update(bot, contact_update("998901234567"))
+    await dispatcher.feed_update(bot, callback_update(LanguageCallback(language=language).pack()))
+
+
+async def test_question_gets_short_answer_with_rating_buttons(
+    dispatcher, bot, session, interactions, translator
+):
+    await onboard(dispatcher, bot, Language.UZ)
+
+    await dispatcher.feed_update(bot, text_update("Omonat ochmoqchiman, foizi qancha?"))
+
+    answer = session.sent_texts()[-1]
+    assert "Hamkorbankda bir nechta omonat turi mavjud" in answer
+    buttons = session.requests[-1].reply_markup.inline_keyboard[0]
+    assert [b.text for b in buttons] == ["👍", "👎"]
+    assert len(interactions.items) == 1
+
+
+async def test_answer_follows_the_selected_language(dispatcher, bot, session):
+    await onboard(dispatcher, bot, Language.RU)
+
+    await dispatcher.feed_update(bot, text_update("Omonat ochmoqchiman"))
+
+    assert "видов вкладов" in session.sent_texts()[-1]
+
+
+async def test_rating_is_saved_and_confirmed(dispatcher, bot, session, interactions):
+    await onboard(dispatcher, bot, Language.UZ)
+    await dispatcher.feed_update(bot, text_update("Kredit olmoqchiman"))
+    interaction_id = next(iter(interactions.items))
+
+    await dispatcher.feed_update(
+        bot, callback_update(RatingCallback(interaction_id=interaction_id, positive=False).pack())
+    )
+
+    assert interactions.items[interaction_id].rating is Rating.DISLIKE
+    toast = [m for m in session.requests if type(m).__name__ == "AnswerCallbackQuery"][-1]
+    assert toast.text == "Rahmat, bahoyingiz qabul qilindi!"
+    edited = [m for m in session.requests if type(m).__name__ == "EditMessageReplyMarkup"][-1]
+    assert [b.text for b in edited.reply_markup.inline_keyboard[0]] == ["👍", "✓ 👎"]
+
+
+async def test_non_text_message_asks_for_text(dispatcher, bot, session, translator):
+    await onboard(dispatcher, bot, Language.UZ)
+    message = Message(message_id=_next_id(), date=datetime.now(UTC), chat=CHAT, from_user=TG_USER)
+
+    await dispatcher.feed_update(bot, Update(update_id=_next_id(), message=message))
+
+    assert session.sent_texts()[-1] == translator.get(Language.UZ, "text_only")

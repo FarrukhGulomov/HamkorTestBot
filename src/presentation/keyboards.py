@@ -8,7 +8,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from src.application.ports import Translator
 from src.domain.entities import Language
-from src.presentation.callbacks import CONSENT_DONE, ConsentCallback, LanguageCallback
+from src.presentation.callbacks import (
+    CONSENT_DONE,
+    RATING_DONE,
+    ConsentCallback,
+    LanguageCallback,
+    RatingCallback,
+)
 
 LANGUAGE_LABELS: dict[Language, str] = {
     Language.UZ: "O'zbekcha",
@@ -64,5 +70,22 @@ def consent_answered_keyboard(
     buttons = [
         InlineKeyboardButton(text=f"✓ {yes}" if agreed else yes, callback_data=CONSENT_DONE),
         InlineKeyboardButton(text=no if agreed else f"✓ {no}", callback_data=CONSENT_DONE),
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=[buttons])
+
+
+def rating_keyboard(interaction_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="👍", callback_data=RatingCallback(interaction_id=interaction_id, positive=True))
+    builder.button(text="👎", callback_data=RatingCallback(interaction_id=interaction_id, positive=False))
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def rating_answered_keyboard(positive: bool) -> InlineKeyboardMarkup:
+    """Baho berilgandan keyin tanlangan tugma ✓ belgisi bilan ko'rsatiladi."""
+    buttons = [
+        InlineKeyboardButton(text="✓ 👍" if positive else "👍", callback_data=RATING_DONE),
+        InlineKeyboardButton(text="👎" if positive else "✓ 👎", callback_data=RATING_DONE),
     ]
     return InlineKeyboardMarkup(inline_keyboard=[buttons])

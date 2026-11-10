@@ -6,9 +6,10 @@ from sqlalchemy import text
 
 from src.application.ports import ConsentNotifier
 from src.application.request_consent import RequestConsent
-from src.domain.entities import ConsentStatus, Language, User
+from src.domain.entities import ConsentStatus, Language, Rating, User
 from src.domain.repositories import ConsentRequestCriteria
 from src.infrastructure.db.session import create_engine, create_session_factory, create_tables
+from src.infrastructure.db.interaction_repository import SqlAlchemyInteractionRepository
 from src.infrastructure.db.user_repository import SqlAlchemyUserRepository
 from tests.fakes import FakeClock
 
@@ -218,3 +219,22 @@ async def test_find_awaiting_consent_filters_users(repository):
     found = await repository.find_awaiting_consent(criteria(NOW))
 
     assert [user.telegram_id for user in found] == [1]
+
+
+async def test_interaction_is_stored_and_rated_once(repository, tmp_path):
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'interactions.db'}")
+    await create_tables(engine)
+    interactions = SqlAlchemyInteractionRepository(create_session_factory(engine))
+
+    created = await interactions.add(7, "Omonat?", "Javob", NOW)
+    assert created.id is not None and created.rating is None
+
+    assert await interactions.record_rating(created.id, 7, Rating.LIKE, NOW) is True
+    assert await interactions.record_rating(created.id, 7, Rating.DISLIKE, NOW) is False
+    assert await interactions.record_rating(created.id, 8, Rating.DISLIKE, NOW) is False
+
+    stored = await interactions.get(created.id)
+    assert stored.rating is Rating.LIKE
+    assert stored.question == "Omonat?"
+    assert await interactions.get(999) is None
+    await engine.dispose()

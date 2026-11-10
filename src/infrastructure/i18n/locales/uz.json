@@ -14,6 +14,7 @@
   "consent_no": "Yo'q",
   "consent_thanks_yes": "Rahmat! Roziligingiz qabul qilindi.",
   "consent_thanks_no": "Tushunarli, rozilik berilmadi.",
-  "help": "Sozlamalarni o'zgartirish uchun /settings buyrug'ini yuboring.",
-  "need_start": "Boshlash uchun /start buyrug'ini yuboring."
+  "need_start": "Boshlash uchun /start buyrug'ini yuboring.",
+  "rating_thanks": "Rahmat, bahoyingiz qabul qilindi!",
+  "text_only": "Iltimos, savolingizni matn ko'rinishida yozing."
 }

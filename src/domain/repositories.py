@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.domain.entities import Language, User
+from src.domain.entities import Interaction, Language, Rating, User
 
 
 @dataclass(frozen=True)
@@ -63,3 +63,18 @@ class UserRepository(ABC):
     @abstractmethod
     async def record_consent(self, telegram_id: int, agreed: bool, now: datetime) -> bool:
         """Javobni faqat hali javob berilmagan bo'lsa saqlaydi. Saqlangan bo'lsa True."""
+
+
+class InteractionRepository(ABC):
+    @abstractmethod
+    async def add(self, telegram_id: int, question: str, answer: str, now: datetime) -> Interaction: ...
+
+    @abstractmethod
+    async def get(self, interaction_id: int) -> Interaction | None: ...
+
+    @abstractmethod
+    async def record_rating(
+        self, interaction_id: int, telegram_id: int, rating: Rating, now: datetime
+    ) -> bool:
+        """Bahoni faqat shu foydalanuvchining hali baholanmagan javobiga yozadi.
+        Saqlangan bo'lsa True qaytaradi."""

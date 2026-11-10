@@ -14,6 +14,7 @@
   "consent_no": "No",
   "consent_thanks_yes": "Thank you! Your consent has been recorded.",
   "consent_thanks_no": "Understood, consent was not given.",
-  "help": "Send /settings to change your settings.",
-  "need_start": "Send /start to begin."
+  "need_start": "Send /start to begin.",
+  "rating_thanks": "Thank you, your rating has been recorded!",
+  "text_only": "Please write your question as text."
 }

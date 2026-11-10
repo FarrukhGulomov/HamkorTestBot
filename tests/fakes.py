@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
-from src.application.ports import Clock, ConsentNotifier
-from src.domain.entities import ConsentStatus, Language, User
-from src.domain.repositories import ConsentRequestCriteria, UserRepository
+from src.application.ports import AnswerProvider, Clock, ConsentNotifier
+from src.domain.entities import ConsentStatus, Interaction, Language, Rating, User
+from src.domain.repositories import ConsentRequestCriteria, InteractionRepository, UserRepository
 
 
 class FakeClock(Clock):
@@ -111,3 +111,41 @@ class RecordingNotifier(ConsentNotifier):
         if self.error is not None:
             raise self.error
         self.sent_to.append(user.telegram_id)
+
+
+class InMemoryInteractionRepository(InteractionRepository):
+    def __init__(self) -> None:
+        self.items: dict[int, Interaction] = {}
+
+    async def add(self, telegram_id: int, question: str, answer: str, now: datetime) -> Interaction:
+        interaction = Interaction(
+            id=len(self.items) + 1,
+            telegram_id=telegram_id,
+            question=question,
+            answer=answer,
+            created_at=now,
+        )
+        self.items[interaction.id] = interaction
+        return Interaction(**vars(interaction))
+
+    async def get(self, interaction_id: int) -> Interaction | None:
+        interaction = self.items.get(interaction_id)
+        return Interaction(**vars(interaction)) if interaction else None
+
+    async def record_rating(
+        self, interaction_id: int, telegram_id: int, rating: Rating, now: datetime
+    ) -> bool:
+        interaction = self.items.get(interaction_id)
+        if interaction is None or interaction.telegram_id != telegram_id or interaction.rating:
+            return False
+        interaction.rating = rating
+        return True
+
+
+class FakeAnswerProvider(AnswerProvider):
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, Language]] = []
+
+    async def answer(self, question: str, language: Language) -> str:
+        self.calls.append((question, language))
+        return f"answer[{language.value}]: {question}"

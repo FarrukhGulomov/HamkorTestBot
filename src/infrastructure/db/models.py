@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, Integer, String
+from sqlalchemy import BigInteger, DateTime, Integer, String, Text
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
@@ -39,3 +39,15 @@ class UserModel(Base):
     consent_answered_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     consent_claimed_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     consent_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class InteractionModel(Base):
+    __tablename__ = "interactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    rating: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime())
+    rated_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)

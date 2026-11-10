@@ -1,6 +1,6 @@
 from aiogram import Router
 
-from src.presentation.handlers import consent, fallback, settings, start
+from src.presentation.handlers import consent, fallback, rating, settings, start
 
 
 def build_root_router() -> Router:
@@ -9,6 +9,7 @@ def build_root_router() -> Router:
         start.build_router(),
         settings.build_router(),
         consent.build_router(),
+        rating.build_router(),
     )
     # fallback eng oxirida bo'lishi kerak, aks holda boshqa handlerlarni to'sib qo'yadi
     root.include_router(fallback.build_router())

@@ -8,6 +8,8 @@ Hamkorbank AI-yordamchisi uchun Telegram bot. Python, aiogram 3, Clean Architect
 - keyin til tanlanadi: O'zbekcha, Ўзбекча, Русский, English, Qaraqalpaqsha, 中文
 - salomlashish tanlangan tilda chiqadi
 - tilni keyinroq `/settings` buyrug'i yoki "⚙️ Sozlamalar" tugmasi orqali almashtirish mumkin
+- foydalanuvchi savol yozsa (masalan, "Omonat ochmoqchiman, foizi qancha?"), bot tanlangan tilda qisqa javob
+  beradi va javob ostida 👍 / 👎 baho tugmalari chiqadi. Baho bazaga yoziladi (har bir javobga bir marta)
 - foydalanuvchi oxirgi marta yozganidan 3 daqiqa o'tsa, ma'lumotlarni qayta ishlashga rozilik so'raladi
   (Roziman / Yo'q). Javob bazaga yoziladi. Rozilik har bir foydalanuvchidan bir marta so'raladi.
 
@@ -55,9 +57,10 @@ Loyiha Clean Architecture bo'yicha qatlamlarga bo'lingan. Bog'liqlik faqat ichka
 ```
 src/
 ├── domain/            # biznes qoidalari: User, Language, ConsentStatus, UserRepository (interfeys)
-├── application/       # use case'lar: RegisterContact, ChangeLanguage, TrackActivity,
-│                      #   RequestConsent, SaveConsent, GetUser + portlar (Clock, ConsentNotifier, Translator)
-├── infrastructure/    # SQLAlchemy repozitoriy, JSON tarjimalar, fon scheduler, tizim vaqti
+├── application/       # use case'lar: RegisterContact, ChangeLanguage, TrackActivity, RequestConsent,
+│                      #   SaveConsent, GetUser, AnswerQuestion, RateAnswer
+│                      #   + portlar (Clock, ConsentNotifier, Translator, AnswerProvider)
+├── infrastructure/    # SQLAlchemy repozitoriylar, JSON tarjimalar, FAQ javoblar, fon scheduler, tizim vaqti
 ├── presentation/      # aiogram: handlerlar, klaviaturalar, middleware, Telegram orqali xabar yuboruvchi
 ├── config.py          # .env dan sozlamalarni o'qish
 └── main.py            # composition root: barcha qatlamlar shu yerda bir-biriga ulanadi
@@ -68,6 +71,16 @@ src/
 - **presentation** `infrastructure` ni import qilmaydi: tarjimalarga `application` dagi `Translator` porti orqali murojaat qiladi.
 - Bu qoidalar `tests/test_architecture.py` da avtomatik tekshiriladi: qatlam ruxsat etilmagan modulni import qilsa, test yiqiladi.
 - Bazani almashtirish uchun faqat `infrastructure/db` o'zgaradi, Telegram o'rniga boshqa kanal ulash uchun faqat `presentation`.
+
+### Savolga javob va baho
+
+`AnswerQuestion` use case'i `AnswerProvider` portidan javob oladi. Hozirgi amalga oshirish
+(`infrastructure/faq`) savoldagi kalit so'z bo'yicha mavzuni (omonat, kredit, karta) aniqlaydi va
+foydalanuvchi tilida tayyor javob qaytaradi. Kalit so'z topilmasa, umumiy javob beriladi.
+Javoblardagi `XX%` va `XXX` qiymatlari namuna (skrinshotdagidek): haqiqiy ma'lumotlarni
+`src/infrastructure/faq/faq.json` da almashtiring. Keyinchalik LLM ulash uchun faqat yangi
+`AnswerProvider` yozish kifoya, boshqa qatlamlar o'zgarmaydi.
+`RateAnswer` bahoni `interactions` jadvaliga yozadi va faqat savol egasining bahosini qabul qiladi.
 
 ### Rozilik qanday ishlaydi
 
