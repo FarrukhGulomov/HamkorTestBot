@@ -7,6 +7,7 @@ from src.application.save_consent import SaveConsent
 from src.domain.entities import DEFAULT_LANGUAGE, ConsentStatus
 from src.presentation.callbacks import CONSENT_DONE, ConsentCallback
 from src.presentation.keyboards import consent_answered_keyboard
+from src.presentation.messages import set_reply_markup
 
 
 def build_router() -> Router:
@@ -20,22 +21,23 @@ def build_router() -> Router:
         translator: Translator,
     ) -> None:
         try:
-            user = await save_consent.execute(callback.from_user.id, callback_data.agreed)
+            result = await save_consent.execute(callback.from_user.id, callback_data.agreed)
         except UserNotFound:
             await callback.answer(translator.get(DEFAULT_LANGUAGE, "need_start"), show_alert=True)
             return
 
+        user = result.user
         language = user.effective_language
         agreed = user.consent_status is ConsentStatus.AGREED
         thanks_key = "consent_thanks_yes" if agreed else "consent_thanks_no"
 
         await callback.answer()
         if isinstance(callback.message, Message):
-            await callback.message.edit_reply_markup(
-                reply_markup=consent_answered_keyboard(translator, language, agreed)
+            await set_reply_markup(
+                callback.message, consent_answered_keyboard(translator, language, agreed)
             )
-            await callback.message.answer(translator.get(language, thanks_key))
-
+            if result.recorded:  # tugma ikki marta bosilsa, "Rahmat" bir marta yuboriladi
+                await callback.message.answer(translator.get(language, thanks_key))
 
     @router.callback_query(F.data == CONSENT_DONE)
     async def consent_already_answered(callback: CallbackQuery) -> None:

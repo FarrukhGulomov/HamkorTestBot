@@ -43,7 +43,7 @@ async def test_rating_is_saved(users, interactions, provider, clock):
     await onboard(users, clock)
     interaction = await AnswerQuestion(users, interactions, provider, clock).execute(1, "q")
 
-    rated = await RateAnswer(interactions, clock).execute(1, interaction.id, Rating.LIKE)
+    rated = (await RateAnswer(interactions, clock).execute(1, interaction.id, Rating.LIKE)).interaction
 
     assert rated.rating is Rating.LIKE
 
@@ -54,7 +54,7 @@ async def test_rating_cannot_be_changed(users, interactions, provider, clock):
     rate = RateAnswer(interactions, clock)
     await rate.execute(1, interaction.id, Rating.LIKE)
 
-    rated = await rate.execute(1, interaction.id, Rating.DISLIKE)
+    rated = (await rate.execute(1, interaction.id, Rating.DISLIKE)).interaction
 
     assert rated.rating is Rating.LIKE
 
@@ -100,3 +100,14 @@ async def test_old_interactions_are_purged_and_recent_ones_kept(users, interacti
 
 async def test_purge_with_nothing_to_delete_returns_zero(interactions, clock):
     assert await PurgeOldInteractions(interactions, clock, timedelta(days=30)).execute() == 0
+
+
+async def test_only_the_first_rating_is_reported_as_recorded(users, interactions, provider, clock):
+    await onboard(users, clock)
+    interaction = await AnswerQuestion(users, interactions, provider, clock).execute(1, "q")
+    rate = RateAnswer(interactions, clock)
+
+    first = await rate.execute(1, interaction.id, Rating.LIKE)
+    second = await rate.execute(1, interaction.id, Rating.LIKE)
+
+    assert (first.recorded, second.recorded) == (True, False)

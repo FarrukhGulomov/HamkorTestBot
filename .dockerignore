@@ -1,0 +1,28 @@
+# Maxfiy va mahalliy fayllar image'ga tushmasligi kerak
+.env
+.env.*
+*.db
+*.sqlite3
+
+# Git va muharrir
+.git
+.gitignore
+.idea
+.vscode
+
+# Python keshlari va muhitlar
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.coverage
+
+# Image'ga kerak emas
+tests
+requirements-dev.txt
+pytest.ini
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore

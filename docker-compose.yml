@@ -6,6 +6,14 @@ services:
       DATABASE_URL: sqlite+aiosqlite:////data/hamkor_bot.db
     volumes:
       - bot-data:/data
+    # Konteyner imkon qadar cheklangan: faqat /data ga yozadi, qo'shimcha huquqlarsiz
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
 volumes:

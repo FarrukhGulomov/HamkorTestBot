@@ -28,12 +28,16 @@ class PeriodicJob:
         with contextlib.suppress(asyncio.CancelledError):
             await self._task
 
+    async def run_once(self) -> None:
+        """Vazifani bir marta bajaradi. Xato bo'lsa, yozib qo'yadi va yuqoriga chiqarmaydi."""
+        try:
+            handled = await self._job()
+            if handled:
+                logger.info("%s: %d ta yozuv qayta ishlandi", self._name, handled)
+        except Exception:
+            logger.exception("%s failed", self._name)
+
     async def _run(self) -> None:
         while True:
-            try:
-                handled = await self._job()
-                if handled:
-                    logger.info("%s: %d ta yozuv qayta ishlandi", self._name, handled)
-            except Exception:
-                logger.exception("%s failed", self._name)
+            await self.run_once()
             await asyncio.sleep(self._interval)

@@ -7,6 +7,7 @@ from src.application.rate_answer import InteractionNotFound, RateAnswer
 from src.domain.entities import DEFAULT_LANGUAGE, Rating
 from src.presentation.callbacks import RATING_DONE, RatingCallback
 from src.presentation.keyboards import rating_answered_keyboard
+from src.presentation.messages import set_reply_markup
 
 
 def build_router() -> Router:
@@ -22,7 +23,7 @@ def build_router() -> Router:
     ) -> None:
         rating = Rating.LIKE if callback_data.positive else Rating.DISLIKE
         try:
-            interaction = await rate_answer.execute(
+            result = await rate_answer.execute(
                 callback.from_user.id, callback_data.interaction_id, rating
             )
         except InteractionNotFound:
@@ -32,10 +33,10 @@ def build_router() -> Router:
         user = await get_user.execute(callback.from_user.id)
         language = user.effective_language if user else DEFAULT_LANGUAGE
 
-        await callback.answer(translator.get(language, "rating_thanks"))
+        await callback.answer(translator.get(language, "rating_thanks") if result.recorded else None)
         if isinstance(callback.message, Message):
-            await callback.message.edit_reply_markup(
-                reply_markup=rating_answered_keyboard(interaction.rating is Rating.LIKE)
+            await set_reply_markup(
+                callback.message, rating_answered_keyboard(result.interaction.rating is Rating.LIKE)
             )
 
     @router.callback_query(F.data == RATING_DONE)

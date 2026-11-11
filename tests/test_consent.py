@@ -170,7 +170,7 @@ async def test_user_who_wrote_after_selection_is_skipped(users, clock):
 async def test_save_consent(users, interactions, clock, agreed, expected):
     await onboard(users, clock)
 
-    user = await SaveConsent(users, interactions, clock).execute(1, agreed)
+    user = (await SaveConsent(users, interactions, clock).execute(1, agreed)).user
 
     assert user.consent_status is expected
     assert user.consent_answered_at == clock.now()
@@ -181,7 +181,7 @@ async def test_answered_consent_is_not_overwritten(users, interactions, clock):
     save_consent = SaveConsent(users, interactions, clock)
     await save_consent.execute(1, True)
 
-    user = await save_consent.execute(1, False)
+    user = (await save_consent.execute(1, False)).user
 
     assert user.consent_status is ConsentStatus.AGREED
 
@@ -200,7 +200,7 @@ async def test_declining_erases_phone_name_and_stored_questions(users, interacti
     interaction = await ask_and_answer(users, interactions, clock)
     await interactions.record_rating(interaction.id, 1, Rating.LIKE, clock.now())
 
-    user = await SaveConsent(users, interactions, clock).execute(1, False)
+    user = (await SaveConsent(users, interactions, clock).execute(1, False)).user
 
     assert user.consent_status is ConsentStatus.DECLINED
     assert user.phone_number == "" and user.first_name == ""
@@ -212,7 +212,7 @@ async def test_declining_erases_phone_name_and_stored_questions(users, interacti
 async def test_agreeing_keeps_personal_data(users, interactions, clock):
     interaction = await ask_and_answer(users, interactions, clock)
 
-    user = await SaveConsent(users, interactions, clock).execute(1, True)
+    user = (await SaveConsent(users, interactions, clock).execute(1, True)).user
 
     assert user.phone_number == "+998901234567" and user.first_name == "Jasur"
     assert interactions.items[interaction.id].question == "Omonat ochmoqchiman"
@@ -252,3 +252,15 @@ async def test_erasure_is_completed_by_a_repeated_press_after_an_interrupted_att
 
     assert users.items[1].phone_number == ""
     assert interactions.items[interaction.id].question == ""
+
+
+async def test_only_the_first_answer_is_reported_as_recorded(users, interactions, clock):
+    await onboard(users, clock)
+    save_consent = SaveConsent(users, interactions, clock)
+
+    first = await save_consent.execute(1, True)
+    second = await save_consent.execute(1, True)
+    third = await save_consent.execute(1, False)
+
+    assert (first.recorded, second.recorded, third.recorded) == (True, False, False)
+    assert third.user.consent_status is ConsentStatus.AGREED

@@ -1,14 +1,17 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import timedelta
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from src.application.answer_question import AnswerQuestion
 from src.application.change_language import ChangeLanguage
 from src.application.get_user import GetUser
+from src.application.ports import Clock
 from src.application.purge_old_interactions import PurgeOldInteractions
 from src.application.rate_answer import RateAnswer
 from src.application.register_contact import RegisterContact
@@ -31,27 +34,33 @@ from src.presentation.notifier import TelegramConsentNotifier
 PURGE_INTERVAL_SECONDS = 3600
 
 
-async def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    settings = Settings()
+@dataclass
+class Application:
+    dispatcher: Dispatcher
+    jobs: list[PeriodicJob]
+    engine: AsyncEngine
+
+
+async def build_application(settings: Settings, bot: Bot, clock: Clock | None = None) -> Application:
+    """Composition root: barcha qatlamlar shu yerda bir-biriga ulanadi."""
+    clock = clock or SystemClock()
 
     engine = create_engine(settings.database_url)
     await create_tables(engine)
 
-    clock = SystemClock()
     translator = JsonTranslator()
     session_factory = create_session_factory(engine)
     users = SqlAlchemyUserRepository(session_factory)
     interactions = SqlAlchemyInteractionRepository(session_factory)
 
-    bot = Bot(settings.bot_token.get_secret_value(), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-
-    track_activity = TrackActivity(users, clock)
     request_consent = RequestConsent(
         users=users,
         notifier=TelegramConsentNotifier(bot, translator),
         clock=clock,
         idle_timeout=timedelta(seconds=settings.consent_idle_seconds),
+    )
+    purge = PurgeOldInteractions(
+        interactions, clock, timedelta(days=settings.interaction_retention_days)
     )
 
     dispatcher = Dispatcher()
@@ -69,25 +78,31 @@ async def main() -> None:
         max_events=settings.rate_limit_max_messages,
         window=timedelta(seconds=settings.rate_limit_window_seconds),
     )
-    install_middlewares(dispatcher, track_activity, rate_limiter)
+    install_middlewares(dispatcher, TrackActivity(users, clock), rate_limiter)
     dispatcher.include_router(build_root_router())
 
-    purge = PurgeOldInteractions(
-        interactions, clock, timedelta(days=settings.interaction_retention_days)
-    )
     jobs = [
         PeriodicJob("Rozilik so'rovlari", request_consent.execute, settings.consent_check_interval_seconds),
         PeriodicJob("Eski savollarni o'chirish", purge.execute, PURGE_INTERVAL_SECONDS),
     ]
-    for job in jobs:
+    return Application(dispatcher=dispatcher, jobs=jobs, engine=engine)
+
+
+async def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    settings = Settings()
+    bot = Bot(settings.bot_token.get_secret_value(), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    app = await build_application(settings, bot)
+
+    for job in app.jobs:
         job.start()
     try:
-        await dispatcher.start_polling(bot)
+        await app.dispatcher.start_polling(bot)
     finally:
-        for job in jobs:
+        for job in app.jobs:
             await job.stop()
         await bot.session.close()
-        await engine.dispose()
+        await app.engine.dispose()
 
 
 if __name__ == "__main__":

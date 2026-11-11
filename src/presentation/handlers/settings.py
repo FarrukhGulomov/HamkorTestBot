@@ -9,6 +9,7 @@ from src.domain.entities import DEFAULT_LANGUAGE
 from src.presentation.callbacks import LanguageCallback
 from src.presentation.filters import TextKey
 from src.presentation.keyboards import language_keyboard, main_menu_keyboard
+from src.presentation.messages import set_reply_markup
 
 
 def build_router() -> Router:
@@ -46,7 +47,7 @@ def build_router() -> Router:
 
         await callback.answer()
         if isinstance(callback.message, Message):
-            await callback.message.edit_reply_markup(reply_markup=None)
+            await set_reply_markup(callback.message, None)
             await callback.message.answer(
                 translator.get(language, text_key),
                 reply_markup=main_menu_keyboard(translator, language),

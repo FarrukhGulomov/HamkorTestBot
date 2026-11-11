@@ -33,9 +33,17 @@ python -m src.main
 Docker bilan:
 
 ```bash
-cp .env.example .env
+cp .env.example .env      # BOT_TOKEN ni yozing
 docker compose up -d --build
+docker compose logs -f bot
 ```
+
+Image `requirements.lock` dagi aniq versiyalar bilan yig'iladi, bot root bo'lmagan foydalanuvchi
+nomidan ishlaydi, konteyner fayl tizimi faqat o'qish uchun va faqat `/data` (baza fayli, `bot-data`
+volume'i) ga yoziladi. `.env` fayli image ichiga tushmaydi (`.dockerignore`), `docker compose` uni
+muhit o'zgaruvchilari sifatida beradi.
+
+`requirements.lock` ni yangilash: yangi venv ochib `pip install -r requirements.txt && pip freeze > requirements.lock`.
 
 ### Sozlamalar (`.env`)
 
@@ -52,7 +60,8 @@ docker compose up -d --build
 Noto'g'ri sozlama (masalan, bo'sh yoki xato token, nol oraliq) bot ishga tushishida aniq xato bilan to'xtatiladi.
 Bot faqat shaxsiy suhbatda ishlaydi, guruh va kanallardagi xabarlar e'tiborsiz qoldiriladi.
 
-PostgreSQL uchun `pip install asyncpg` qiling va `DATABASE_URL=postgresql+asyncpg://user:password@host:5432/db` deb yozing.
+PostgreSQL uchun faqat `DATABASE_URL=postgresql+asyncpg://user:password@host:5432/db` deb yozing (drayver
+`requirements.txt` da bor). Eslatma: PostgreSQL bilan haqiqiy serverda sinab ko'rilmagan, testlar SQLite'da o'tadi.
 Jadvallar bot ishga tushganda avtomatik yaratiladi.
 
 ## Testlar

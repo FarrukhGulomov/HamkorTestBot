@@ -1,12 +1,11 @@
 """Handlerlar, middleware va use case'lar birga ishlashini tekshiradi.
 Telegram o'rniga soxta sessiya ishlatiladi: yuborilgan so'rovlar ro'yxatga yig'iladi."""
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from aiogram import Bot, Dispatcher
-from aiogram.client.session.base import BaseSession
-from aiogram.methods import SendMessage, TelegramMethod
-from aiogram.types import Chat, Contact, Message, Update, User as TgUser, CallbackQuery
+from aiogram.types import CallbackQuery, Message, Update
 
 from src.application.answer_question import AnswerQuestion
 from src.application.change_language import ChangeLanguage
@@ -24,35 +23,16 @@ from src.presentation.handlers import build_root_router
 from src.infrastructure.rate_limiter import InMemoryRateLimiter
 from src.presentation.middlewares import install_middlewares
 from src.presentation.notifier import TelegramConsentNotifier
-
-CHAT = Chat(id=7, type="private")
-TG_USER = TgUser(id=7, is_bot=False, first_name="Jasur")
-
-
-class RecordingSession(BaseSession):
-    def __init__(self) -> None:
-        super().__init__()
-        self.requests: list[TelegramMethod] = []
-
-    async def close(self) -> None: ...
-
-    async def make_request(self, bot, method, timeout=None):
-        self.requests.append(method)
-        if isinstance(method, SendMessage):
-            return Message(
-                message_id=len(self.requests),
-                date=datetime.now(UTC),
-                chat=CHAT,
-                text=method.text,
-            )
-        return True
-
-    async def stream_content(self, *args, **kwargs):
-        yield b""
-
-    def sent_texts(self) -> list[str]:
-        return [m.text for m in self.requests if isinstance(m, SendMessage)]
-
+from tests.telegram import (
+    CHAT,
+    GROUP,
+    TG_USER,
+    RecordingSession,
+    callback_update,
+    contact_update,
+    next_id as _next_id,
+    text_update,
+)
 
 @pytest.fixture
 def session() -> RecordingSession:
@@ -85,32 +65,6 @@ def dispatcher(users, interactions, clock, translator) -> Dispatcher:
     install_middlewares(dp, TrackActivity(users, clock), generous_limiter)
     dp.include_router(build_root_router())
     return dp
-
-
-_update_id = 0
-
-
-def _next_id() -> int:
-    global _update_id
-    _update_id += 1
-    return _update_id
-
-
-def text_update(text: str) -> Update:
-    message = Message(message_id=_next_id(), date=datetime.now(UTC), chat=CHAT, from_user=TG_USER, text=text)
-    return Update(update_id=_next_id(), message=message)
-
-
-def contact_update(phone: str, user_id: int = 7) -> Update:
-    contact = Contact(phone_number=phone, first_name="Jasur", user_id=user_id)
-    message = Message(message_id=_next_id(), date=datetime.now(UTC), chat=CHAT, from_user=TG_USER, contact=contact)
-    return Update(update_id=_next_id(), message=message)
-
-
-def callback_update(data: str) -> Update:
-    origin = Message(message_id=_next_id(), date=datetime.now(UTC), chat=CHAT, text="...")
-    callback = CallbackQuery(id=str(_next_id()), from_user=TG_USER, chat_instance="x", data=data, message=origin)
-    return Update(update_id=_next_id(), callback_query=callback)
 
 
 async def test_full_onboarding_flow(dispatcher, bot, session, users, translator):
@@ -263,9 +217,6 @@ async def test_non_text_message_asks_for_text(dispatcher, bot, session, translat
     assert session.sent_texts()[-1] == translator.get(Language.UZ, "text_only")
 
 
-GROUP = Chat(id=-100500, type="supergroup", title="Guruh")
-
-
 async def test_messages_in_group_chats_are_ignored(dispatcher, bot, session, users):
     await onboard(dispatcher, bot, Language.UZ)
     requests_before = len(session.requests)
@@ -348,3 +299,69 @@ async def test_declining_consent_through_the_bot_erases_the_data(dispatcher, bot
 
     assert users.items[7].phone_number == "" and users.items[7].first_name == ""
     assert next(iter(interactions.items.values())).question == ""
+
+
+@pytest.fixture
+def strict_session() -> RecordingSession:
+    return RecordingSession(strict=True)
+
+
+async def test_double_tap_on_consent_button_sends_one_thank_you_and_no_error(
+    dispatcher, strict_session, users, translator
+):
+    bot = Bot("123456:TEST", session=strict_session)
+    await onboard(dispatcher, bot, Language.UZ)
+    thanks = translator.get(Language.UZ, "consent_thanks_yes")
+    tap = ConsentCallback(agreed=True).pack()
+
+    # Telegram bir xabarga ikki marta bir vaqtda "bosish" yuborishi mumkin
+    await asyncio.gather(
+        dispatcher.feed_update(bot, callback_update(tap, message_id=999)),
+        dispatcher.feed_update(bot, callback_update(tap, message_id=999)),
+    )
+    await dispatcher.feed_update(bot, callback_update(tap, message_id=999))
+
+    assert strict_session.sent_texts().count(thanks) == 1
+    assert users.items[7].consent_status is ConsentStatus.AGREED
+
+
+async def test_opposite_double_tap_keeps_the_first_answer(dispatcher, strict_session, users, translator):
+    bot = Bot("123456:TEST", session=strict_session)
+    await onboard(dispatcher, bot, Language.UZ)
+
+    await dispatcher.feed_update(bot, callback_update(ConsentCallback(agreed=True).pack(), message_id=999))
+    await dispatcher.feed_update(bot, callback_update(ConsentCallback(agreed=False).pack(), message_id=999))
+
+    assert users.items[7].consent_status is ConsentStatus.AGREED
+    assert users.items[7].phone_number == "+998901234567"  # keyingi "Yo'q" hech narsani o'chirmaydi
+    assert strict_session.sent_texts().count(translator.get(Language.UZ, "consent_thanks_no")) == 0
+
+
+async def test_double_tap_on_rating_button_is_harmless(dispatcher, strict_session, interactions, translator):
+    bot = Bot("123456:TEST", session=strict_session)
+    await onboard(dispatcher, bot, Language.UZ)
+    await dispatcher.feed_update(bot, text_update("Omonat ochmoqchiman"))
+    interaction_id = next(iter(interactions.items))
+    tap = RatingCallback(interaction_id=interaction_id, positive=True).pack()
+
+    await asyncio.gather(
+        dispatcher.feed_update(bot, callback_update(tap, message_id=999)),
+        dispatcher.feed_update(bot, callback_update(tap, message_id=999)),
+    )
+
+    toasts = [m.text for m in strict_session.of_type("AnswerCallbackQuery") if m.text]
+    assert toasts == [translator.get(Language.UZ, "rating_thanks")]
+    assert interactions.items[interaction_id].rating is Rating.LIKE
+
+
+async def test_double_tap_on_language_button_does_not_fail(dispatcher, strict_session, users):
+    bot = Bot("123456:TEST", session=strict_session)
+    await dispatcher.feed_update(bot, contact_update("998901234567"))
+    tap = LanguageCallback(language=Language.RU).pack()
+
+    await asyncio.gather(
+        dispatcher.feed_update(bot, callback_update(tap, message_id=555)),
+        dispatcher.feed_update(bot, callback_update(tap, message_id=555)),
+    )
+
+    assert users.items[7].language is Language.RU

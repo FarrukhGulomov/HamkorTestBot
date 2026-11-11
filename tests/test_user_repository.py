@@ -272,3 +272,49 @@ async def test_redact_questions_and_delete_older_than(tmp_path):
     assert await interactions.get(old.id) is None
     assert await interactions.get(mine.id) is not None
     await engine.dispose()
+
+
+async def test_simultaneous_first_contacts_create_a_single_user(repository):
+    users = await asyncio.gather(
+        *(repository.upsert_contact(5, "+998901234567", "Jasur", NOW) for _ in range(8))
+    )
+
+    assert all(user.telegram_id == 5 for user in users)
+    assert (await repository.get(5)).phone_number == "+998901234567"
+
+
+async def test_only_one_of_simultaneous_answers_is_recorded(repository):
+    await repository.upsert_contact(5, "+998901234567", "Jasur", NOW)
+
+    results = await asyncio.gather(
+        repository.record_consent(5, True, NOW),
+        repository.record_consent(5, False, NOW),
+        repository.record_consent(5, True, NOW),
+    )
+
+    assert results.count(True) == 1
+
+
+async def test_only_one_of_simultaneous_ratings_is_recorded(tmp_path):
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'ratings.db'}")
+    await create_tables(engine)
+    interactions = SqlAlchemyInteractionRepository(create_session_factory(engine))
+    created = await interactions.add(1, "q", "a", NOW)
+
+    results = await asyncio.gather(
+        *(interactions.record_rating(created.id, 1, Rating.LIKE, NOW) for _ in range(5))
+    )
+
+    assert results.count(True) == 1
+    await engine.dispose()
+
+
+def test_postgresql_engine_and_column_types_are_supported():
+    from sqlalchemy.dialects import postgresql
+
+    from src.infrastructure.db.models import UtcDateTime
+
+    engine = create_engine("postgresql+asyncpg://user:password@localhost:5432/hamkor_bot")
+
+    assert engine.dialect.name == "postgresql"
+    assert "TIMESTAMP" in UtcDateTime().compile(dialect=postgresql.dialect())

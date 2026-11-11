@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from src.domain.entities import ConsentStatus, Language, User
@@ -20,6 +21,16 @@ class SqlAlchemyUserRepository(UserRepository):
             return _to_entity(model) if model else None
 
     async def upsert_contact(
+        self, telegram_id: int, phone_number: str, first_name: str, now: datetime
+    ) -> User:
+        try:
+            return await self._upsert_contact_once(telegram_id, phone_number, first_name, now)
+        except IntegrityError:
+            # Bir vaqtda kelgan ikkinchi so'rov yozuvni oldinroq yaratib ulgurdi: endi u mavjud,
+            # shuning uchun yangilash sifatida qayta bajariladi
+            return await self._upsert_contact_once(telegram_id, phone_number, first_name, now)
+
+    async def _upsert_contact_once(
         self, telegram_id: int, phone_number: str, first_name: str, now: datetime
     ) -> User:
         async with self._session_factory() as session:
