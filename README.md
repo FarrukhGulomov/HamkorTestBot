@@ -15,8 +15,11 @@ Hamkorbank AI-yordamchisi uchun Telegram bot. Python, aiogram 3, Clean Architect
 
 ## Ishga tushirish
 
+Python **3.11 yoki undan yangisi** kerak (`python3 --version` bilan tekshiring). macOS'dagi tizim
+Python'i odatda eski bo'ladi, yangisini `brew install python` bilan o'rnating.
+
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env      # BOT_TOKEN ni @BotFather dan olib yozing
@@ -34,10 +37,13 @@ docker compose up -d --build
 
 | O'zgaruvchi | Izoh | Standart |
 |---|---|---|
-| `BOT_TOKEN` | Telegram bot tokeni | — |
+| `BOT_TOKEN` | Telegram bot tokeni (`123456789:AAH...` ko'rinishida) | — |
 | `DATABASE_URL` | SQLite yoki PostgreSQL | `sqlite+aiosqlite:///./hamkor_bot.db` |
-| `CONSENT_IDLE_SECONDS` | rozilik so'ralishidan oldingi kutish vaqti | `180` |
-| `CONSENT_CHECK_INTERVAL_SECONDS` | tekshiruv oralig'i | `5` |
+| `CONSENT_IDLE_SECONDS` | rozilik so'ralishidan oldingi kutish vaqti (1 dan katta) | `180` |
+| `CONSENT_CHECK_INTERVAL_SECONDS` | tekshiruv oralig'i (1 dan katta) | `5` |
+
+Noto'g'ri sozlama (masalan, bo'sh yoki xato token, nol oraliq) bot ishga tushishida aniq xato bilan to'xtatiladi.
+Bot faqat shaxsiy suhbatda ishlaydi, guruh va kanallardagi xabarlar e'tiborsiz qoldiriladi.
 
 PostgreSQL uchun `pip install asyncpg` qiling va `DATABASE_URL=postgresql+asyncpg://user:password@host:5432/db` deb yozing.
 Jadvallar bot ishga tushganda avtomatik yaratiladi.

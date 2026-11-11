@@ -21,7 +21,7 @@ from src.infrastructure.faq.answer_provider import FaqAnswerProvider
 from src.infrastructure.i18n.translator import JsonTranslator
 from src.presentation.callbacks import ConsentCallback, LanguageCallback, RatingCallback
 from src.presentation.handlers import build_root_router
-from src.presentation.middlewares import ActivityMiddleware
+from src.presentation.middlewares import ActivityMiddleware, PrivateChatOnlyMiddleware
 from src.presentation.notifier import TelegramConsentNotifier
 
 CHAT = Chat(id=7, type="private")
@@ -80,6 +80,9 @@ def dispatcher(users, interactions, clock, translator) -> Dispatcher:
         answer_question=AnswerQuestion(users, interactions, FaqAnswerProvider(), clock),
         rate_answer=RateAnswer(interactions, clock),
     )
+    private_only = PrivateChatOnlyMiddleware()
+    dp.message.outer_middleware(private_only)
+    dp.callback_query.outer_middleware(private_only)
     dp.message.outer_middleware(ActivityMiddleware(TrackActivity(users, clock)))
     dp.include_router(build_root_router())
     return dp
@@ -259,3 +262,34 @@ async def test_non_text_message_asks_for_text(dispatcher, bot, session, translat
     await dispatcher.feed_update(bot, Update(update_id=_next_id(), message=message))
 
     assert session.sent_texts()[-1] == translator.get(Language.UZ, "text_only")
+
+
+GROUP = Chat(id=-100500, type="supergroup", title="Guruh")
+
+
+async def test_messages_in_group_chats_are_ignored(dispatcher, bot, session, users):
+    await onboard(dispatcher, bot, Language.UZ)
+    requests_before = len(session.requests)
+    last_seen = users.items[7].last_message_at
+
+    for text in ("/start", "/settings", "Omonat ochmoqchiman"):
+        message = Message(message_id=_next_id(), date=datetime.now(UTC), chat=GROUP, from_user=TG_USER, text=text)
+        await dispatcher.feed_update(bot, Update(update_id=_next_id(), message=message))
+
+    assert len(session.requests) == requests_before
+    assert users.items[7].last_message_at == last_seen
+
+
+async def test_button_presses_in_group_chats_are_ignored(dispatcher, bot, session, users, interactions):
+    await onboard(dispatcher, bot, Language.UZ)
+    requests_before = len(session.requests)
+    origin = Message(message_id=_next_id(), date=datetime.now(UTC), chat=GROUP, text="...")
+    callback = CallbackQuery(
+        id=str(_next_id()), from_user=TG_USER, chat_instance="x", message=origin,
+        data=ConsentCallback(agreed=True).pack(),
+    )
+
+    await dispatcher.feed_update(bot, Update(update_id=_next_id(), callback_query=callback))
+
+    assert len(session.requests) == requests_before
+    assert users.items[7].consent_status is ConsentStatus.PENDING

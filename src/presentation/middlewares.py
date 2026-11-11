@@ -2,9 +2,33 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message
+from aiogram.enums import ChatType
+from aiogram.types import CallbackQuery, Message, TelegramObject
 
 from src.application.track_activity import TrackActivity
+
+
+class PrivateChatOnlyMiddleware(BaseMiddleware):
+    """Bot faqat shaxsiy suhbatda ishlaydi: guruh va kanallardagi xabarlar e'tiborsiz qoldiriladi.
+    Telefon raqamini ulashish tugmasi ham faqat shaxsiy suhbatda ishlaydi."""
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        if _chat_type(event) != ChatType.PRIVATE:
+            return None
+        return await handler(event, data)
+
+
+def _chat_type(event: TelegramObject) -> ChatType | None:
+    if isinstance(event, Message):
+        return event.chat.type
+    if isinstance(event, CallbackQuery) and event.message is not None:
+        return event.message.chat.type
+    return None
 
 
 class ActivityMiddleware(BaseMiddleware):
