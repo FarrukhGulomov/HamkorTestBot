@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./hamkor_bot.db"
     consent_idle_seconds: int = Field(default=180, ge=1)
     consent_check_interval_seconds: int = Field(default=5, ge=1)
+    interaction_retention_days: int = Field(default=30, ge=1)
+    rate_limit_max_messages: int = Field(default=5, ge=1)
+    rate_limit_window_seconds: int = Field(default=10, ge=1)
 
     @field_validator("bot_token")
     @classmethod

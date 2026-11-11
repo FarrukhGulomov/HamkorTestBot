@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import update
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from src.domain.entities import Interaction, Rating
@@ -41,6 +41,22 @@ class SqlAlchemyInteractionRepository(InteractionRepository):
             )
             await session.commit()
             return result.rowcount > 0
+
+    async def redact_questions(self, telegram_id: int) -> None:
+        await self._execute(
+            update(InteractionModel)
+            .where(InteractionModel.telegram_id == telegram_id)
+            .values(question="")
+        )
+
+    async def delete_older_than(self, cutoff: datetime) -> int:
+        return await self._execute(delete(InteractionModel).where(InteractionModel.created_at < cutoff))
+
+    async def _execute(self, statement) -> int:
+        async with self._session_factory() as session:
+            result = await session.execute(statement)
+            await session.commit()
+            return result.rowcount
 
 
 def _to_entity(model: InteractionModel) -> Interaction:

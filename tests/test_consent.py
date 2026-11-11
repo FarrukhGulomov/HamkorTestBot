@@ -2,15 +2,16 @@ from datetime import timedelta
 
 import pytest
 
+from src.application.answer_question import AnswerQuestion
 from src.application.change_language import ChangeLanguage, UserNotFound
 from src.application.ports import PermanentDeliveryError
 from src.application.register_contact import RegisterContact
 from src.application.request_consent import RequestConsent
 from src.application.save_consent import SaveConsent
 from src.application.track_activity import TrackActivity
-from src.domain.entities import ConsentStatus, Language
+from src.domain.entities import ConsentStatus, Language, Rating
 from src.domain.repositories import ConsentRequestCriteria
-from tests.fakes import RecordingNotifier
+from tests.fakes import FakeAnswerProvider, RecordingNotifier
 
 IDLE = timedelta(minutes=3)
 
@@ -166,18 +167,18 @@ async def test_user_who_wrote_after_selection_is_skipped(users, clock):
     ("agreed", "expected"),
     [(True, ConsentStatus.AGREED), (False, ConsentStatus.DECLINED)],
 )
-async def test_save_consent(users, clock, agreed, expected):
+async def test_save_consent(users, interactions, clock, agreed, expected):
     await onboard(users, clock)
 
-    user = await SaveConsent(users, clock).execute(1, agreed)
+    user = await SaveConsent(users, interactions, clock).execute(1, agreed)
 
     assert user.consent_status is expected
     assert user.consent_answered_at == clock.now()
 
 
-async def test_answered_consent_is_not_overwritten(users, clock):
+async def test_answered_consent_is_not_overwritten(users, interactions, clock):
     await onboard(users, clock)
-    save_consent = SaveConsent(users, clock)
+    save_consent = SaveConsent(users, interactions, clock)
     await save_consent.execute(1, True)
 
     user = await save_consent.execute(1, False)
@@ -185,6 +186,69 @@ async def test_answered_consent_is_not_overwritten(users, clock):
     assert user.consent_status is ConsentStatus.AGREED
 
 
-async def test_save_consent_for_unknown_user_fails(users, clock):
+async def test_save_consent_for_unknown_user_fails(users, interactions, clock):
     with pytest.raises(UserNotFound):
-        await SaveConsent(users, clock).execute(99, True)
+        await SaveConsent(users, interactions, clock).execute(99, True)
+
+
+async def ask_and_answer(users, interactions, clock, question="Omonat ochmoqchiman"):
+    await onboard(users, clock)
+    return await AnswerQuestion(users, interactions, FakeAnswerProvider(), clock).execute(1, question)
+
+
+async def test_declining_erases_phone_name_and_stored_questions(users, interactions, clock):
+    interaction = await ask_and_answer(users, interactions, clock)
+    await interactions.record_rating(interaction.id, 1, Rating.LIKE, clock.now())
+
+    user = await SaveConsent(users, interactions, clock).execute(1, False)
+
+    assert user.consent_status is ConsentStatus.DECLINED
+    assert user.phone_number == "" and user.first_name == ""
+    stored = interactions.items[interaction.id]
+    assert stored.question == ""
+    assert stored.rating is Rating.LIKE  # baho va javob statistika uchun qoladi
+
+
+async def test_agreeing_keeps_personal_data(users, interactions, clock):
+    interaction = await ask_and_answer(users, interactions, clock)
+
+    user = await SaveConsent(users, interactions, clock).execute(1, True)
+
+    assert user.phone_number == "+998901234567" and user.first_name == "Jasur"
+    assert interactions.items[interaction.id].question == "Omonat ochmoqchiman"
+
+
+async def test_questions_of_a_user_who_declined_are_not_stored(users, interactions, clock):
+    await onboard(users, clock)
+    await SaveConsent(users, interactions, clock).execute(1, False)
+
+    interaction = await AnswerQuestion(users, interactions, FakeAnswerProvider(), clock).execute(
+        1, "Mening kartam 8600 1234 5678 9012"
+    )
+
+    assert interaction.answer.endswith("Mening kartam 8600 1234 5678 9012")  # bot javob berishda davom etadi
+    assert interactions.items[interaction.id].question == ""
+
+
+async def test_sharing_the_contact_again_does_not_restore_declined_data(users, interactions, clock):
+    await onboard(users, clock)
+    await SaveConsent(users, interactions, clock).execute(1, False)
+
+    user = await RegisterContact(users, clock).execute(1, "+998905556677", "Jasur")
+
+    assert user.phone_number == ""
+    assert users.items[1].phone_number == "" and users.items[1].first_name == ""
+
+
+async def test_erasure_is_completed_by_a_repeated_press_after_an_interrupted_attempt(
+    users, interactions, clock
+):
+    interaction = await ask_and_answer(users, interactions, clock)
+    # Javob yozildi-yu, jarayon o'chirishga ulgurmay to'xtadi
+    await users.record_consent(1, False, clock.now())
+    assert users.items[1].phone_number == "+998901234567"
+
+    await SaveConsent(users, interactions, clock).execute(1, False)
+
+    assert users.items[1].phone_number == ""
+    assert interactions.items[interaction.id].question == ""

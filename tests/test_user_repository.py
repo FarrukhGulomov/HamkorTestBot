@@ -238,3 +238,37 @@ async def test_interaction_is_stored_and_rated_once(repository, tmp_path):
     assert stored.question == "Omonat?"
     assert await interactions.get(999) is None
     await engine.dispose()
+
+
+async def test_erase_personal_data_blanks_phone_and_name_only(repository):
+    await repository.upsert_contact(1, "+998901234567", "Jasur", NOW)
+    await repository.set_language(1, Language.RU)
+
+    await repository.erase_personal_data(1)
+
+    user = await repository.get(1)
+    assert user.phone_number == "" and user.first_name == ""
+    assert user.language is Language.RU and user.created_at == NOW
+
+
+async def test_redact_questions_and_delete_older_than(tmp_path):
+    engine = create_engine(f"sqlite+aiosqlite:///{tmp_path / 'retention.db'}")
+    await create_tables(engine)
+    interactions = SqlAlchemyInteractionRepository(create_session_factory(engine))
+    old = await interactions.add(1, "eski savol", "javob", NOW - timedelta(days=40))
+    mine = await interactions.add(1, "yangi savol", "javob", NOW)
+    other = await interactions.add(2, "boshqaning savoli", "javob", NOW)
+    await interactions.record_rating(mine.id, 1, Rating.LIKE, NOW)
+
+    await interactions.redact_questions(1)
+
+    assert (await interactions.get(mine.id)).question == ""
+    assert (await interactions.get(mine.id)).rating is Rating.LIKE
+    assert (await interactions.get(other.id)).question == "boshqaning savoli"
+
+    deleted = await interactions.delete_older_than(NOW - timedelta(days=30))
+
+    assert deleted == 1
+    assert await interactions.get(old.id) is None
+    assert await interactions.get(mine.id) is not None
+    await engine.dispose()

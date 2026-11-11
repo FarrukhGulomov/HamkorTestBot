@@ -1,17 +1,20 @@
 import asyncio
 import contextlib
 import logging
-
-from src.application.request_consent import RequestConsent
+from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
 
-class ConsentScheduler:
-    """Fon rejimida har `interval` soniyada rozilik so'rovlarini tekshirib turadi."""
+class PeriodicJob:
+    """Berilgan vazifani fon rejimida har `interval_seconds` soniyada takrorlaydi.
+    Vazifa xato bersa, ish to'xtamaydi: xato yoziladi va keyingi marta qayta uriniladi."""
 
-    def __init__(self, request_consent: RequestConsent, interval_seconds: int) -> None:
-        self._request_consent = request_consent
+    def __init__(
+        self, name: str, job: Callable[[], Awaitable[int]], interval_seconds: float
+    ) -> None:
+        self._name = name
+        self._job = job
         self._interval = interval_seconds
         self._task: asyncio.Task | None = None
 
@@ -28,9 +31,9 @@ class ConsentScheduler:
     async def _run(self) -> None:
         while True:
             try:
-                sent = await self._request_consent.execute()
-                if sent:
-                    logger.info("Consent requested from %d user(s)", sent)
+                handled = await self._job()
+                if handled:
+                    logger.info("%s: %d ta yozuv qayta ishlandi", self._name, handled)
             except Exception:
-                logger.exception("Consent check failed")
+                logger.exception("%s failed", self._name)
             await asyncio.sleep(self._interval)

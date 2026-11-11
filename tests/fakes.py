@@ -48,6 +48,12 @@ class InMemoryUserRepository(UserRepository):
         if telegram_id in self.items:
             self.items[telegram_id].last_message_at = now
 
+    async def erase_personal_data(self, telegram_id: int) -> None:
+        user = self.items.get(telegram_id)
+        if user:
+            user.phone_number = ""
+            user.first_name = ""
+
     async def set_language(self, telegram_id: int, language: Language) -> bool:
         if telegram_id not in self.items:
             return False
@@ -140,6 +146,17 @@ class InMemoryInteractionRepository(InteractionRepository):
             return False
         interaction.rating = rating
         return True
+
+    async def redact_questions(self, telegram_id: int) -> None:
+        for interaction in self.items.values():
+            if interaction.telegram_id == telegram_id:
+                interaction.question = ""
+
+    async def delete_older_than(self, cutoff: datetime) -> int:
+        old = [i for i, item in self.items.items() if item.created_at < cutoff]
+        for interaction_id in old:
+            del self.items[interaction_id]
+        return len(old)
 
 
 class FakeAnswerProvider(AnswerProvider):

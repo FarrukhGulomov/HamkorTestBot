@@ -12,6 +12,10 @@ Hamkorbank AI-yordamchisi uchun Telegram bot. Python, aiogram 3, Clean Architect
   beradi va javob ostida 👍 / 👎 baho tugmalari chiqadi. Baho bazaga yoziladi (har bir javobga bir marta)
 - foydalanuvchi oxirgi marta yozganidan 3 daqiqa o'tsa, ma'lumotlarni qayta ishlashga rozilik so'raladi
   (Roziman / Yo'q). Javob bazaga yoziladi. Rozilik har bir foydalanuvchidan bir marta so'raladi.
+- "Yo'q" javobida telefon raqami, ism va avval saqlangan savol matnlari o'chiriladi, keyingi savollar
+  matni saqlanmaydi (bot javob berishda davom etadi)
+- bitta foydalanuvchi qisqa vaqtda ko'p xabar yuborsa, ortiqchalari e'tiborsiz qoldiriladi;
+  savol-javoblar belgilangan muddatdan keyin avtomatik o'chiriladi
 
 ## Ishga tushirish
 
@@ -41,6 +45,9 @@ docker compose up -d --build
 | `DATABASE_URL` | SQLite yoki PostgreSQL | `sqlite+aiosqlite:///./hamkor_bot.db` |
 | `CONSENT_IDLE_SECONDS` | rozilik so'ralishidan oldingi kutish vaqti (1 dan katta) | `180` |
 | `CONSENT_CHECK_INTERVAL_SECONDS` | tekshiruv oralig'i (1 dan katta) | `5` |
+| `INTERACTION_RETENTION_DAYS` | savol-javoblar necha kun saqlanadi | `30` |
+| `RATE_LIMIT_MAX_MESSAGES` | oyna ichida bitta foydalanuvchining ko'pi bilan nechta xabari qayta ishlanadi | `5` |
+| `RATE_LIMIT_WINDOW_SECONDS` | tezlik cheklovi oynasi | `10` |
 
 Noto'g'ri sozlama (masalan, bo'sh yoki xato token, nol oraliq) bot ishga tushishida aniq xato bilan to'xtatiladi.
 Bot faqat shaxsiy suhbatda ishlaydi, guruh va kanallardagi xabarlar e'tiborsiz qoldiriladi.
@@ -82,7 +89,9 @@ src/
 
 `AnswerQuestion` use case'i `AnswerProvider` portidan javob oladi. Hozirgi amalga oshirish
 (`infrastructure/faq`) savoldagi kalit so'z bo'yicha mavzuni (omonat, kredit, karta) aniqlaydi va
-foydalanuvchi tilida tayyor javob qaytaradi. Kalit so'z topilmasa, umumiy javob beriladi.
+foydalanuvchi tilida tayyor javob qaytaradi. Kalit so'z so'zning boshida bo'lishi kerak
+("kartamni" mos, "discard" mos emas); bir necha mavzu uchrasa, birinchi uchragani tanlanadi.
+Kalit so'z topilmasa, umumiy javob beriladi. Savol 1000 belgigacha qisqartiriladi.
 Javoblardagi `XX%` va `XXX` qiymatlari namuna (skrinshotdagidek): haqiqiy ma'lumotlarni
 `src/infrastructure/faq/faq.json` da almashtiring. Keyinchalik LLM ulash uchun faqat yangi
 `AnswerProvider` yozish kifoya, boshqa qatlamlar o'zgarmaydi.
@@ -102,6 +111,9 @@ Savol foydalanuvchining shaxsiy ma'lumotlarini (telefon raqami va ism) qayta ish
    qayta olinadi. Urinishlar soni bazada (`consent_attempts`) saqlanadi va 5 tadan oshmaydi, shuning
    uchun qayta ishga tushirish ham bu chegarani aylanib o'tolmaydi. Bot bloklangan bo'lsa, qayta urinilmaydi.
 6. Tugma bosilganda `SaveConsent` javobni (`agreed` / `declined`) vaqti bilan bazaga yozadi.
+   Javob "Yo'q" bo'lsa, shu use case foydalanuvchining telefon raqami, ismi va saqlangan savol
+   matnlarini o'chiradi. Keyin kontakt qayta ulashilsa ham ular qayta saqlanmaydi. Baho va botning
+   javobi statistika uchun qoladi.
 
 Bilib qo'yish kerak bo'lgan jihatlar:
 

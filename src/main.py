@@ -9,6 +9,7 @@ from aiogram.enums import ParseMode
 from src.application.answer_question import AnswerQuestion
 from src.application.change_language import ChangeLanguage
 from src.application.get_user import GetUser
+from src.application.purge_old_interactions import PurgeOldInteractions
 from src.application.rate_answer import RateAnswer
 from src.application.register_contact import RegisterContact
 from src.application.request_consent import RequestConsent
@@ -21,10 +22,13 @@ from src.infrastructure.db.session import create_engine, create_session_factory,
 from src.infrastructure.db.user_repository import SqlAlchemyUserRepository
 from src.infrastructure.faq.answer_provider import FaqAnswerProvider
 from src.infrastructure.i18n.translator import JsonTranslator
-from src.infrastructure.scheduler import ConsentScheduler
+from src.infrastructure.rate_limiter import InMemoryRateLimiter
+from src.infrastructure.scheduler import PeriodicJob
 from src.presentation.handlers import build_root_router
-from src.presentation.middlewares import ActivityMiddleware, PrivateChatOnlyMiddleware
+from src.presentation.middlewares import install_middlewares
 from src.presentation.notifier import TelegramConsentNotifier
+
+PURGE_INTERVAL_SECONDS = 3600
 
 
 async def main() -> None:
@@ -56,22 +60,32 @@ async def main() -> None:
         get_user=GetUser(users),
         register_contact=RegisterContact(users, clock),
         change_language=ChangeLanguage(users),
-        save_consent=SaveConsent(users, clock),
+        save_consent=SaveConsent(users, interactions, clock),
         answer_question=AnswerQuestion(users, interactions, FaqAnswerProvider(), clock),
         rate_answer=RateAnswer(interactions, clock),
     )
-    private_only = PrivateChatOnlyMiddleware()
-    dispatcher.message.outer_middleware(private_only)
-    dispatcher.callback_query.outer_middleware(private_only)
-    dispatcher.message.outer_middleware(ActivityMiddleware(track_activity))
+    rate_limiter = InMemoryRateLimiter(
+        clock,
+        max_events=settings.rate_limit_max_messages,
+        window=timedelta(seconds=settings.rate_limit_window_seconds),
+    )
+    install_middlewares(dispatcher, track_activity, rate_limiter)
     dispatcher.include_router(build_root_router())
 
-    scheduler = ConsentScheduler(request_consent, settings.consent_check_interval_seconds)
-    scheduler.start()
+    purge = PurgeOldInteractions(
+        interactions, clock, timedelta(days=settings.interaction_retention_days)
+    )
+    jobs = [
+        PeriodicJob("Rozilik so'rovlari", request_consent.execute, settings.consent_check_interval_seconds),
+        PeriodicJob("Eski savollarni o'chirish", purge.execute, PURGE_INTERVAL_SECONDS),
+    ]
+    for job in jobs:
+        job.start()
     try:
         await dispatcher.start_polling(bot)
     finally:
-        await scheduler.stop()
+        for job in jobs:
+            await job.stop()
         await bot.session.close()
         await engine.dispose()
 

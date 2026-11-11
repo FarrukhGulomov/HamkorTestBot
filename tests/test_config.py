@@ -8,7 +8,10 @@ TOKEN = "123456789:AAH-valid_token"
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    for name in ("BOT_TOKEN", "DATABASE_URL", "CONSENT_IDLE_SECONDS", "CONSENT_CHECK_INTERVAL_SECONDS"):
+    for name in (
+        "BOT_TOKEN", "DATABASE_URL", "CONSENT_IDLE_SECONDS", "CONSENT_CHECK_INTERVAL_SECONDS",
+        "INTERACTION_RETENTION_DAYS", "RATE_LIMIT_MAX_MESSAGES", "RATE_LIMIT_WINDOW_SECONDS",
+    ):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -21,6 +24,9 @@ def test_defaults_match_the_requirements():
 
     assert settings.consent_idle_seconds == 180
     assert settings.consent_check_interval_seconds == 5
+    assert settings.interaction_retention_days == 30
+    assert settings.rate_limit_max_messages == 5
+    assert settings.rate_limit_window_seconds == 10
 
 
 def test_settings_are_read_from_environment(monkeypatch):
@@ -51,7 +57,16 @@ def test_missing_token_is_rejected():
         Settings(_env_file=None)
 
 
-@pytest.mark.parametrize("name", ["consent_idle_seconds", "consent_check_interval_seconds"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "consent_idle_seconds",
+        "consent_check_interval_seconds",
+        "interaction_retention_days",
+        "rate_limit_max_messages",
+        "rate_limit_window_seconds",
+    ],
+)
 @pytest.mark.parametrize("value", [0, -1])
 def test_non_positive_intervals_are_rejected(name, value):
     with pytest.raises(ValidationError):

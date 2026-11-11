@@ -36,6 +36,10 @@ class UserRepository(ABC):
         """Oxirgi faollik vaqtini yangilaydi."""
 
     @abstractmethod
+    async def erase_personal_data(self, telegram_id: int) -> None:
+        """Telefon raqami va ismni o'chiradi (bo'sh qiymat bilan almashtiradi)."""
+
+    @abstractmethod
     async def set_language(self, telegram_id: int, language: Language) -> bool:
         """Tilni o'zgartiradi. Foydalanuvchi topilmasa False qaytaradi."""
 
@@ -78,3 +82,11 @@ class InteractionRepository(ABC):
     ) -> bool:
         """Bahoni faqat shu foydalanuvchining hali baholanmagan javobiga yozadi.
         Saqlangan bo'lsa True qaytaradi."""
+
+    @abstractmethod
+    async def redact_questions(self, telegram_id: int) -> None:
+        """Foydalanuvchining saqlangan savol matnlarini tozalaydi (javob va baho qoladi)."""
+
+    @abstractmethod
+    async def delete_older_than(self, cutoff: datetime) -> int:
+        """`cutoff` dan oldin yaratilgan yozuvlarni o'chiradi va ularning sonini qaytaradi."""

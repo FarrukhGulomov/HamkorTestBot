@@ -21,7 +21,8 @@ from src.infrastructure.faq.answer_provider import FaqAnswerProvider
 from src.infrastructure.i18n.translator import JsonTranslator
 from src.presentation.callbacks import ConsentCallback, LanguageCallback, RatingCallback
 from src.presentation.handlers import build_root_router
-from src.presentation.middlewares import ActivityMiddleware, PrivateChatOnlyMiddleware
+from src.infrastructure.rate_limiter import InMemoryRateLimiter
+from src.presentation.middlewares import install_middlewares
 from src.presentation.notifier import TelegramConsentNotifier
 
 CHAT = Chat(id=7, type="private")
@@ -76,14 +77,12 @@ def dispatcher(users, interactions, clock, translator) -> Dispatcher:
         get_user=GetUser(users),
         register_contact=RegisterContact(users, clock),
         change_language=ChangeLanguage(users),
-        save_consent=SaveConsent(users, clock),
+        save_consent=SaveConsent(users, interactions, clock),
         answer_question=AnswerQuestion(users, interactions, FaqAnswerProvider(), clock),
         rate_answer=RateAnswer(interactions, clock),
     )
-    private_only = PrivateChatOnlyMiddleware()
-    dp.message.outer_middleware(private_only)
-    dp.callback_query.outer_middleware(private_only)
-    dp.message.outer_middleware(ActivityMiddleware(TrackActivity(users, clock)))
+    generous_limiter = InMemoryRateLimiter(clock, max_events=1000, window=timedelta(seconds=10))
+    install_middlewares(dp, TrackActivity(users, clock), generous_limiter)
     dp.include_router(build_root_router())
     return dp
 
@@ -293,3 +292,59 @@ async def test_button_presses_in_group_chats_are_ignored(dispatcher, bot, sessio
 
     assert len(session.requests) == requests_before
     assert users.items[7].consent_status is ConsentStatus.PENDING
+
+
+def build_dispatcher(users, interactions, clock, translator, max_events: int) -> Dispatcher:
+    dp = Dispatcher()
+    dp.workflow_data.update(
+        translator=translator,
+        get_user=GetUser(users),
+        register_contact=RegisterContact(users, clock),
+        change_language=ChangeLanguage(users),
+        save_consent=SaveConsent(users, interactions, clock),
+        answer_question=AnswerQuestion(users, interactions, FaqAnswerProvider(), clock),
+        rate_answer=RateAnswer(interactions, clock),
+    )
+    limiter = InMemoryRateLimiter(clock, max_events=max_events, window=timedelta(seconds=10))
+    install_middlewares(dp, TrackActivity(users, clock), limiter)
+    dp.include_router(build_root_router())
+    return dp
+
+
+async def test_flood_of_messages_is_cut_off_by_the_rate_limit(
+    bot, session, users, interactions, clock, translator
+):
+    dp = build_dispatcher(users, interactions, clock, translator, max_events=4)
+    await onboard(dp, bot, Language.UZ)  # 2 ta harakat
+
+    for _ in range(10):
+        await dp.feed_update(bot, text_update("Omonat ochmoqchiman"))
+
+    assert len(interactions.items) == 2  # limitga 2 ta joy qolgan edi
+
+    clock.advance(seconds=11)
+    await dp.feed_update(bot, text_update("Omonat ochmoqchiman"))
+    assert len(interactions.items) == 3
+
+
+async def test_throttled_button_press_is_acknowledged_but_not_processed(
+    bot, session, users, interactions, clock, translator
+):
+    dp = build_dispatcher(users, interactions, clock, translator, max_events=2)
+    await onboard(dp, bot, Language.UZ)
+
+    await dp.feed_update(bot, callback_update(ConsentCallback(agreed=False).pack()))
+
+    assert users.items[7].consent_status is ConsentStatus.PENDING
+    assert type(session.requests[-1]).__name__ == "AnswerCallbackQuery"
+
+
+async def test_declining_consent_through_the_bot_erases_the_data(dispatcher, bot, users, interactions):
+    await onboard(dispatcher, bot, Language.UZ)
+    await dispatcher.feed_update(bot, text_update("Omonat ochmoqchiman"))
+    assert next(iter(interactions.items.values())).question == "Omonat ochmoqchiman"
+
+    await dispatcher.feed_update(bot, callback_update(ConsentCallback(agreed=False).pack()))
+
+    assert users.items[7].phone_number == "" and users.items[7].first_name == ""
+    assert next(iter(interactions.items.values())).question == ""

@@ -1,10 +1,11 @@
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from aiogram import BaseMiddleware
+from aiogram import BaseMiddleware, Dispatcher
 from aiogram.enums import ChatType
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
+from src.application.ports import RateLimiter
 from src.application.track_activity import TrackActivity
 
 
@@ -46,3 +47,36 @@ class ActivityMiddleware(BaseMiddleware):
         if event.from_user is not None:
             await self._track_activity.execute(event.from_user.id)
         return await handler(event, data)
+
+
+class ThrottlingMiddleware(BaseMiddleware):
+    """Foydalanuvchi bo'yicha tezlik cheklovi: limitdan oshgan xabarlar va tugma bosishlar
+    e'tiborsiz qoldiriladi (bazaga ham tegilmaydi)."""
+
+    def __init__(self, rate_limiter: RateLimiter) -> None:
+        self._rate_limiter = rate_limiter
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        user = event.from_user if isinstance(event, Message | CallbackQuery) else None
+        if user is not None and not self._rate_limiter.allow(user.id):
+            if isinstance(event, CallbackQuery):
+                await event.answer()  # tugmadagi "yuklanmoqda" belgisi yo'qolishi uchun
+            return None
+        return await handler(event, data)
+
+
+def install_middlewares(
+    dispatcher: Dispatcher, track_activity: TrackActivity, rate_limiter: RateLimiter
+) -> None:
+    """Tartib muhim: avval chat turi, keyin tezlik cheklovi, oxirida faollikni yozish."""
+    private_only = PrivateChatOnlyMiddleware()
+    throttling = ThrottlingMiddleware(rate_limiter)
+    for observer in (dispatcher.message, dispatcher.callback_query):
+        observer.outer_middleware(private_only)
+        observer.outer_middleware(throttling)
+    dispatcher.message.outer_middleware(ActivityMiddleware(track_activity))

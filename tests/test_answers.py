@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 import pytest
 
-from src.application.answer_question import AnswerQuestion
+from src.application.answer_question import MAX_QUESTION_LENGTH, AnswerQuestion
+from src.application.purge_old_interactions import PurgeOldInteractions
 from src.application.change_language import ChangeLanguage, UserNotFound
 from src.application.rate_answer import InteractionNotFound, RateAnswer
 from src.application.register_contact import RegisterContact
@@ -69,3 +72,31 @@ async def test_user_cannot_rate_someone_elses_answer(users, interactions, provid
 async def test_rating_unknown_answer_fails(interactions, clock):
     with pytest.raises(InteractionNotFound):
         await RateAnswer(interactions, clock).execute(1, 999, Rating.LIKE)
+
+
+async def test_overlong_question_is_truncated_before_storing(users, interactions, provider, clock):
+    await onboard(users, clock)
+
+    interaction = await AnswerQuestion(users, interactions, provider, clock).execute(1, "a" * 5000)
+
+    assert len(interactions.items[interaction.id].question) == MAX_QUESTION_LENGTH
+    assert len(provider.calls[0][0]) == MAX_QUESTION_LENGTH
+
+
+async def test_old_interactions_are_purged_and_recent_ones_kept(users, interactions, provider, clock):
+    await onboard(users, clock)
+    answer = AnswerQuestion(users, interactions, provider, clock)
+    old = await answer.execute(1, "eski savol")
+    clock.advance(days=20)
+    recent = await answer.execute(1, "yangi savol")
+    clock.advance(days=11)  # eski savol 31 kunlik, yangisi 11 kunlik
+
+    purged = await PurgeOldInteractions(interactions, clock, timedelta(days=30)).execute()
+
+    assert purged == 1
+    assert old.id not in interactions.items
+    assert recent.id in interactions.items
+
+
+async def test_purge_with_nothing_to_delete_returns_zero(interactions, clock):
+    assert await PurgeOldInteractions(interactions, clock, timedelta(days=30)).execute() == 0

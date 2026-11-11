@@ -36,3 +36,10 @@ class AnswerProvider(ABC):
 
     @abstractmethod
     async def answer(self, question: str, language: Language) -> str: ...
+
+
+class RateLimiter(ABC):
+    @abstractmethod
+    def allow(self, key: int) -> bool:
+        """Kalit (foydalanuvchi) uchun yana bir harakatga ruxsat bormi.
+        Ruxsat berilsa, harakat hisobga olinadi."""

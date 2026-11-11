@@ -42,6 +42,13 @@ class SqlAlchemyUserRepository(UserRepository):
             update(UserModel).where(UserModel.telegram_id == telegram_id).values(last_message_at=now)
         )
 
+    async def erase_personal_data(self, telegram_id: int) -> None:
+        await self._execute(
+            update(UserModel)
+            .where(UserModel.telegram_id == telegram_id)
+            .values(phone_number="", first_name="")
+        )
+
     async def set_language(self, telegram_id: int, language: Language) -> bool:
         result = await self._execute(
             update(UserModel)

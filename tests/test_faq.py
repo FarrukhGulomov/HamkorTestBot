@@ -70,3 +70,53 @@ def test_html_tags_are_balanced_and_consistent_across_languages(faq):
         for language, text in answers.items():
             assert text.count("<b>") == text.count("</b>"), (name, language)
             assert len(re.findall(r"<b>", text)) == len(re.findall(r"<b>", answers["uz"])), (name, language)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Картошка сколько стоит?",
+        "I will discard it",
+        "Kartoshka narxi qancha?",
+        "卡在哪里",
+        "Foizi qancha?",
+        "Salom",
+    ],
+)
+async def test_words_that_merely_contain_a_keyword_do_not_match(provider, faq, question):
+    answer = await provider.answer(question, Language.UZ)
+
+    assert answer == faq["default"]["uz"]
+
+
+@pytest.mark.parametrize(
+    ("question", "topic"),
+    [
+        ("Kartamni yo'qotdim", "card"),
+        ("Omonatlarim haqida so'ramoqchiman", "deposit"),
+        ("Kreditga ariza bermoqchiman", "credit"),
+        ("Хочу оформить карту", "card"),
+        ("Какие есть вклады?", "deposit"),
+        ("How do I get a card?", "card"),
+        ("请问银行卡怎么办理", "card"),
+    ],
+)
+async def test_inflected_forms_still_match(provider, faq, question, topic):
+    answer = await provider.answer(question, Language.EN)
+
+    assert answer == faq["topics"][topic]["answers"]["en"]
+
+
+@pytest.mark.parametrize(
+    ("question", "topic"),
+    [
+        ("Kredit kartasi kerak", "credit"),
+        ("Kartamni kreditga bog'lash kerak", "card"),
+        ("Omonat va kredit haqida", "deposit"),
+        ("Kredit va omonat haqida", "credit"),
+    ],
+)
+async def test_first_mentioned_topic_wins(provider, faq, question, topic):
+    answer = await provider.answer(question, Language.EN)
+
+    assert answer == faq["topics"][topic]["answers"]["en"]
